@@ -30,7 +30,9 @@ def load_params():
     param = {}
     param_uncl = {}  # unclustered time series for weather data
 
-    path_input_data = "input_data"
+    path_input_data = ".\\plug_and_play_model\\input_data\\"
+    current_working_directory = os.getcwd()
+    # print(f"Current working directory: {current_working_directory}")
 
     ################################################################
     # GENERAL PARAMETERS
