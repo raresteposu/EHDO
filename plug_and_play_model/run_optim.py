@@ -26,7 +26,7 @@ import copy
 
 # My plan was to run the algorithm once, get the results, and then check if the capcacity results were bigger then the minimal capacity allowed for each device. If not, deactivate all devices with capacity lower than the minimum allowed capacity and run the algorithm again.
 
-# I didn't manage to make it work. I don't understand the codebase and it is poorly documentated. It seems that load_params calculates something as well, as i get the same result_dict with the run_optim and without it.
+# I didn't manage to make it work. I don't understand the codebase and it is poorly documentated. It seems that load_params calculates something as well, as i get the same result_dict with the optim_model and without it.
    
 # -----------------------------------------------------------------------------
 
@@ -72,12 +72,34 @@ def check_and_deactivate(param, devs, result_dict, min_allowed_capacities):
     return changes_made, modified_devs
 
 # Inital run 
-param, devs, dem, result_dict = load_params.load_params()
+
+buildings = ["reference",
+             "ac_istzustand", 
+             "ac_sanierterzustand", 
+             "pmh_istzustand",
+             "pmh_sanierterzustand",
+             "hnbk_istzustand",
+             "hnbk_sanierterzustand",
+             "sk_istzustand",
+             "sk_sanierterzustand"]
+size = ["reference", "dez", "zent"]
+years = ["reference", "2024", "2030", "2040", "2045"]
+
+
+building = "reference"
+size = "reference"
+year = "reference"
+devices_to_use = ["HP", "BOI", "CHP", "PV", "BAT"] # Feasible devices
+
+param, devs, dem, result_dict = load_params.load_params(building, size, year, devices_to_use)
 
 result_dict = run_optimization(param, devs, dem, result_dict)
 
+with open('result_dict.json', 'w') as json_file:
+    json.dump(result_dict, json_file, indent=4)
 
-# Check and rerun
+
+''' Check and rerun
 
 changes_made, modified_devs = check_and_deactivate(param, devs, result_dict, min_allowed_capacities)
 
@@ -86,9 +108,7 @@ if changes_made:
 
     result_dict = run_optimization(param, devs, dem, result_dict)
 
-
-with open('result_dict.json', 'w') as json_file:
-    json.dump(result_dict, json_file, indent=4)
+'''
 
 
 

@@ -142,14 +142,17 @@ def run_optim(devs, param, dem, result_dict):
     inv = {}
     c_inv = {}
     c_om = {}
+    c_dem = {}
     c_total = {}
     for device in all_devs:
         inv[device] = model.addVar(vtype = "C", name="investment_costs_" + device)
-    for device in all_devs:
+
         c_inv[device] = model.addVar(vtype = "C", name="annual_investment_costs_" + device)
-    for device in all_devs:
+
         c_om[device] = model.addVar(vtype = "C", name="om_costs_" + device)
-    for device in all_devs:
+
+        c_dem[device] = model.addVar(vtype = "C", name="demand_costs_" + device)
+
         c_total[device] = model.addVar(vtype = "C", name="total_annual_costs_" + device)
 
     # Capacity of grid connections (gas and electricity)
@@ -502,25 +505,65 @@ def run_optim(devs, param, dem, result_dict):
         model.addConstr(hydrogen_import_total <= param["supply_limit_hydrogen"])
 
 
-    # Total investment costs
-    for device in all_devs:
-        model.addConstr(inv[device] == devs[device]["inv_var"] * cap[device])
+    #%% INVESTMENT COSTS
 
-    # Annual investment costs
-    for device in all_devs:
+    tax = 1429  #TODO: Cumva nu se modifică nimic dacă schimbi aici.
+    crf = param["CRF"] # See: load_params.py/calc_annual_investment
+
+    b = { # Preisänderungsquotient
+        "infl": 1.0, #TODO: Find a value
+        "el": 1.0,  #TODO: CAGR, see Energiepreise.xlsx
+        "gas": 1.0,  #TODO: CAGR, see Energiepreise.xlsx
+    }
+    # tac 5799223
+
+    for device in devs.keys():
+        
+        # ------- Total Investemnt costs ------- 
+
+        res_value = devs[device]["res_value"]
+
+        model.addConstr(inv[device] == crf * (1 - res_value) * tax * cap[device])
+
+        # ------ Annual investment costs -------
+
         model.addConstr(c_inv[device] == inv[device] * devs[device]["ann_factor"])
 
-    # Operation and maintenance costs
-    for device in all_devs:
-        model.addConstr(c_om[device] == devs[device]["cost_om"] * inv[device])
+        # ------- Operation and maintenance costs -------
 
-    # Total annual costs
-    for device in all_devs:
-        model.addConstr(c_total[device] == c_inv[device] + c_om[device])
+        model.addConstr(c_om[device] == crf * b["infl"] * devs[device]["cost_om"] * inv[device])
 
+        # ------- Demand related costs -------
 
+        gas_devices = {"CHP", "BOI", "GHP", "SAB"}
+        el_devices = {"PV", "WT", "WAT", "HP", "EB", "CC", "CHP", "BCHP", "WCHP", "ELYZ", "FC"}
+
+        if device in gas_devices:
+            gas_price = param["price_supply_gas"]
+            dt = 1
+            weight_days = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]  #Days per month
+            
+            model.addConstr(c_dem[device] == crf * b["gas"] * gas_price * dt * 
+                            sum(sum(gas[device][d][t] for t in time_steps) * weight_days[d] for d in days))
+        
+        if device in el_devices:
+
+            el_price = param["price_supply_el"]
+            dt = 1
+            weight_days = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]  #Days per month
+
+            model.addConstr(c_dem[device] == crf * b["el"] * el_price * dt * 
+                            sum(sum(power[device][d][t] for t in time_steps) * weight_days[d] for d in days))
+
+        # ------- Total annual costs -------
+
+        model.addConstr(c_total[device] == c_inv[device] + c_om[device] + c_dem[device])
+
+    
     #%% OBJECTIVE FUNCTIONS
+    
     # Total annualized costs
+
     model.addConstr(obj["tac"] == sum(c_total[dev] for dev in all_devs) # annualized investments
                                 + supply_costs_gas + cap_costs_gas # gas costs
                                 + supply_costs_el + cap_costs_el # electricity costs
@@ -532,6 +575,7 @@ def run_optim(devs, param, dem, result_dict):
 
 
     # Annual CO2 emissions: Implicit emissions by power supply from national grid is penalized, feed-in is ignored
+    
     model.addConstr(obj["co2"] == from_el_grid_total * param["co2_el_grid"]
                                       + from_gas_grid_total * param["co2_gas"]
                                       + biom_import_total * param["co2_biom"]

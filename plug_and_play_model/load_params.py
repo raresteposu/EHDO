@@ -14,6 +14,7 @@ Contact:        Marco Wirtz
 
 """
 
+import json
 import numpy as np
 import math
 import clustering_medoid as clustering
@@ -22,15 +23,15 @@ import os
 import csv
 import solar_modeling
 
-
-def load_params():
+def load_params(building, size, year, devices_to_use):
 
     result_dict = {}
+    param = {}  # general parameters
 
-    param = {}
     param_uncl = {}  # unclustered time series for weather data
 
     path_input_data = ".\\plug_and_play_model\\input_data\\"
+
     current_working_directory = os.getcwd()
     # print(f"Current working directory: {current_working_directory}")
 
@@ -68,10 +69,10 @@ def load_params():
 
     dem_uncl = {}
 
-    dem_uncl["heat"] = np.loadtxt(os.path.join(path_input_data, "heating_demand.txt"))
-    dem_uncl["cool"] = np.loadtxt(os.path.join(path_input_data, "cooling_demand.txt"))
-    dem_uncl["power"] = np.loadtxt(os.path.join(path_input_data, "electricity_demand.txt"))
-    dem_uncl["hydrogen"] = np.loadtxt(os.path.join(path_input_data, "hydrogen_demand.txt"))
+    dem_uncl["heat"] = np.loadtxt(os.path.join(path_input_data, "demand_heating_"+building+".txt"))
+    dem_uncl["cool"] = np.loadtxt(os.path.join(path_input_data, "demand_cooling_"+building+".txt"))
+    dem_uncl["power"] = np.loadtxt(os.path.join(path_input_data, "demand_electricity_"+building+".txt"))
+    dem_uncl["hydrogen"] = np.loadtxt(os.path.join(path_input_data, "demand_hydrogen_"+building+".txt"))
 
     for k in ["heat", "cool", "power", "hydrogen"]:
         param["peak_"+k] = np.max(dem_uncl[k])
@@ -137,22 +138,33 @@ def load_params():
     ################################################################
     # LOAD TECHNICAL PARAMETERS
 
-
     devs = {}
+    
 
-    # Photovoltaics
-    devs["PV"] = {
-        "feasible":  True,
-        "eta":       0.18,
-        "life_time": 20,
-        "inv_var":   800,
-        "cost_om":   0.02,
-        "max_area":  1000,
-        "min_area":  0,
-        # For correlation between area and peak power:
-        "G_stc": 1, # kW/m^2,  solar radiation under standard test conditions (STC)
-        }
+    data_devs_reference_path = ".\\plug_and_play_model\\input_data\\devs_reference.json"
+    with open(data_devs_reference_path, 'r') as file:
+        data_devs_reference = json.load(file)
+    
+    devs.update(data_devs_reference)
 
+    devs_path = ".\\plug_and_play_model\\input_data\\devs_"+size+".json"
+    with open(devs_path, 'r') as file:
+        data_devs = json.load(file)
+
+    # Give an error if data_devs contains a key that is not in devs
+
+    for key in data_devs.keys():
+        if key not in devs.keys():
+            raise ValueError(f"Key {key} in from the devs_{size}.json file was not found in the devs_reference.json.")
+
+    devs.update(data_devs)
+
+    for device in devs.keys():
+        if device not in devices_to_use:
+            devs[device]["feasible"] = False
+        else:
+            devs[device]["feasible"] = True
+    
     devs["PV"]["norm_power"] = solar_modeling.pv_system(direct_tilted_irrad = param["GHI"] - param["DHI"],
                                                  diffuse_tilted_irrad = param["DHI"],
                                                  theta = 0,
@@ -160,43 +172,7 @@ def load_params():
                                                  wind_speed = param["wind_speed"]
                                                  )/1e3  # in kW/kWp
 
-    # Wind turbine
-    devs["WT"] = {
-        "feasible":  True,
-        "inv_var":   900,
-        "life_time": 20,
-        "cost_om":   0.03,
-        "min_cap":   0,
-        "max_cap":   10000,
-        "h_coeff":   0.14,  # hellmann_coeff
-        "hub_h":     122,
-        "ref_h":     10,
-        }
     devs["WT"]["norm_power"] = calc_WT_power(devs, param) # relative power between 0 and 1
-
-    # Hydropower
-    devs["WAT"] = {
-        "feasible":  False,  # Technology enabled/disabled
-        "inv_var":   1000,   # EUR/kW
-        "life_time": 40,     # a, life time
-        "cost_om":   0.02,   # ---
-        "min_cap":   0,      # kW_el
-        "max_cap":   10000,  # kW_el
-        "potential": 1000,   # kW_el
-        }
-
-    # Solar thermal collector
-    devs["STC"] = {
-        "feasible":  False,
-        "eta":       0.45,
-        "inv_var":   400,
-        "life_time": 20,
-        "cost_om":   0.02,
-        "max_area":  10000,  # m2
-        "min_area":  0,      # m2
-        # For correlation between area and peak power:
-        "G_stc": 1, # kW/m^2,  solar radiation under standard test conditions (STC)
-        }
 
     devs["STC"]["specific_heat"] = solar_modeling.collector_system(direct_tilted_irrad = param["GHI"] - param["DHI"],
                                                               diffuse_tilted_irrad = param["DHI"],
@@ -204,318 +180,35 @@ def load_params():
                                                               T_air = param["T_air"]
                                                               )/1e3
 
-    ### Natural gas ###
 
-    # CHP
-    devs["CHP"] = {
-        "feasible":  True,
-        "inv_var":   1000,
-        "eta_el":    0.35,
-        "eta_th":    0.5,
-        "life_time": 20,
-        "cost_om":   0.08,
-        "min_cap":   0,
-        "max_cap":   10000,  # kW_el
-    }
+    eta_carnot = devs["HP"]["eta_carnot"]
+    supply_temp = devs["HP"]["supply_temp"]
 
-    # Gas boiler
-    devs["BOI"] = {
-        "feasible":  True,
-        "inv_var":   150,
-        "eta_th":    0.95,
-        "life_time": 20,
-        "cost_om":   0.01,
-        "min_cap":   0,
-        "max_cap":   10000,  # kW_th
-    }
+    COP = np.zeros((param["n_clusters"], 24))
+    for d in range(param["n_clusters"]):
+        for t in range(24):
+            COP[d][t] = eta_carnot * (supply_temp+273.15)/(supply_temp-param["T_air"][d][t])
+    
+    devs["HP"]["COP"] = COP
+        
 
-    # Gas heat pump
-    devs["GHP"] = {
-        "feasible":  False,
-        "inv_var":   900,
-        "COP":       1.5,
-        "life_time": 20,
-        "cost_om":   0.03,
-        "min_cap":   0,
-        "max_cap":   10000,  # kw_th,
-    }
-
-
-    ### Heating and cooling ###
-
-    # Heat pump (depending on investment and COP, it can be air source or ground source heat pump)
-    devs["HP"] = {
-        "feasible": True,
-        "inv_var": 350,  # EUR/kW_th
-        "life_time": 20,
-        "cost_om": 0.03,
-        "min_cap": 0,
-        "max_cap": 10000,  # kw_th,
-        "COP": 5 * np.ones((param["n_clusters"], 24)),
-    }
-
-    # Electric boiler
-    devs["EB"] = {
-        "feasible":  False,
-        "inv_var":   80,
-        "eta_th":    0.98,
-        "life_time": 20,
-        "cost_om":   0.01,
-        "min_cap":   0,
-        "max_cap":   10000,  # kW
-    }
-
-    # Compression chiller
-    devs["CC"] = {
-        "feasible":  True,
-        "inv_var":   600,
-        "COP":       5,
-        "life_time": 20,
-        "cost_om":   0.05,
-        "min_cap":   0,
-        "max_cap":   10000,  # kW_th
-    }
-
-    # Absorption chiller
-    devs["AC"] = {
-        "feasible":  True,
-        "inv_var":   750,
-        "eta_th":    0.6,
-        "life_time": 20,
-        "cost_om":   0.05,
-        "min_cap":   0,
-        "max_cap":   10000,  # kW_th
-    }
-
-
-    ### Biomass and waste ###
-
-    # Biomass CHP
-    devs["BCHP"] = {
-        "feasible":  False,
-        "inv_var":   2000,  # kW_el
-        "eta_el":    0.35,
-        "eta_th":    0.5,
-        "life_time": 20,
-        "cost_om":   0.08,
-        "min_cap":   0,
-        "max_cap":   10000, # kW_el
-    }
-
-    # Biomass boiler
-    devs["BBOI"] = {
-        "feasible":  False,
-        "inv_var":   300,
-        "eta_th":    0.95,
-        "life_time": 20,
-        "cost_om":   0.04,
-        "min_cap":   0,
-        "max_cap":   10000,
-    }
-
-    # Waste CHP
-    devs["WCHP"] = {
-        "feasible":  False,
-        "inv_var":   2000,  # kW_el
-        "eta_el":    0.35,
-        "eta_th":    0.5,
-        "life_time": 20,
-        "cost_om":   0.08,
-        "min_cap":   0,
-        "max_cap":   10000, # kW_el
-    }
-
-    # Waste boiler
-    devs["WBOI"] = {
-        "feasible":  False,
-        "inv_var":   300,
-        "eta_th":    0.95,
-        "life_time": 20,
-        "cost_om":   0.04,
-        "min_cap":   0,
-        "max_cap":   10000,
-    }
-
-    ### Hydrogen ###
-
-    # Electrolyzer
-    devs["ELYZ"] = {
-        "feasible":  True,
-        "inv_var":   1500,
-        "eta_el":    0.7,
-        "life_time": 20,
-        "cost_om":   0.08,
-        "min_cap":   0,
-        "max_cap":   10000,  # kW_el
-    }
-
-    # Fuel cell
-    devs["FC"] = {
-        "feasible":  False,
-        "inv_var":   4000,
-        "eta_el":    0.35,
-        "eta_th":    0.5,
-        "life_time": 20,
-        "cost_om":   0.05,
-        "min_cap":   0,
-        "max_cap":   10000,
-        "enable_heat_diss": True,
-    }
-
-    # Hydrogen storage
-    devs["H2S"] = {
-        "feasible":  False,
-        "inv_var":   150,  # EUR/kWh
-        "sto_loss":  0,
-        "life_time": 20,
-        "cost_om":   0.05,
-        "min_cap":   0,
-        "max_cap":   100000,  # kWh
-    }
-
-    # Sabatier reactor
-    devs["SAB"] = {
-        "feasible":  False,
-        "inv_var":   800,
-        "eta":       83,
-        "life_time": 20,
-        "cost_om":   0.05,
-        "min_cap":   0,
-        "max_cap":   10000,
-    }
-
-
-    ### Storages ###
-
-    # Heat thermal energy storage
     deltaT = 40
-    devs["TES"] = {
-        "feasible":  True,
-        "inv_var":   500 / (param["rho_w"] * param["c_w"] * deltaT / 3600), # EUR/kWh
-        "sto_loss":  0.01,
-        "life_time": 20,
-        "cost_om":   0.01,
-        "min_cap":   0 * param["rho_w"] * param["c_w"] * deltaT / 3600, # kWh
-        "max_cap":   100000 * param["rho_w"] * param["c_w"] * deltaT / 3600, # kWh
-        "delta_T":   deltaT, # K
-        "soc_init":  0.5,  # ---,              maximum initial state of charge
-    }
+    devs["TES"]["inv_var"] = 500 / (param["rho_w"] * param["c_w"] * deltaT / 3600) # EUR/kWh
+    devs["TES"]["min_cap"] = 0 * param["rho_w"] * param["c_w"] * deltaT / 3600 # kWh
+    devs["TES"]["max_cap"] = 100000 * param["rho_w"] * param["c_w"] * deltaT / 3600 # kWh
+    devs["TES"]["delta_T"] = deltaT # K
 
-    # Cold thermal energy storage
-    deltaT = 10
-    devs["CTES"] = {
-        "feasible":  False,
-        "inv_var":   500 / (param["rho_w"] * param["c_w"] * deltaT / 3600), # EUR/kWh
-        "sto_loss":  0.005,
-        "life_time": 20,
-        "cost_om":   0.01,
-        "min_cap":   0 * param["rho_w"] * param["c_w"] * deltaT / 3600, # kWh
-        "max_cap":   100000 * param["rho_w"] * param["c_w"] * deltaT / 3600, # kWh
-        "delta_T":   deltaT, # K,
-        "soc_init":  0.5,  # ---,              maximum initial state of charge
-    }
-
-    # Battery
-    devs["BAT"] = {
-        "feasible":  False,
-        "inv_var":   500,
-        "life_time": 20,
-        "cost_om":   0.01,
-        "min_cap":   0,
-        "max_cap":   10000,  # kWh
-        "sto_loss":  0,    # 1/h,              standby losses over one time step
-        "soc_init":  0.5,  # ---,              maximum initial state of charge
-    }
-
-    # Gas storage
-    devs["GS"] = {
-        "feasible":  False,
-        "inv_var":   150, # EUR/kWh
-        "life_time": 20,
-        "cost_om":   0.01,
-        "min_cap":   0, # kWh
-        "max_cap":   10000, # kWh
-        "sto_loss":  0,    # 1/h,              standby losses over one time step
-        "soc_init":  0.5,  # ---,              maximum initial state of charge
-    }
 
 
     ################################################################
     # LOAD MODEL PARAMETERS
 
-    ### Energy costs ###
-    # Electricity costs
-    param["enable_supply_el"] = True
-    param["price_supply_el"]  = 0.15
 
-    param["price_cap_el"] = 0  # kEUR/MW
-    param["enable_feed_in_el"]  = True
-    param["revenue_feed_in_el"] = 0.05
+    param_path = ".\\plug_and_play_model\\input_data\\param_"+year+".json"
+    with open(param_path, 'r') as file:
+        data_param = json.load(file)
 
-    param["enable_cap_limit_el"] = False
-    param["cap_limit_el"]        = 1000  # kW
-
-    param["enable_supply_limit_el"] = False
-    param["supply_limit_el"]        = 100000 # kWh/a
-
-
-    # Natural gas
-    param["enable_supply_gas"] = True
-    param["price_supply_gas"]  = 0.05
-    param["price_cap_gas"] = 0
-    param["enable_feed_in_gas"]      = False
-    param["revenue_feed_in_gas"]     = 0.01
-
-    param["enable_cap_limit_gas"]    = False
-    param["cap_limit_gas"]           = 100  # kW
-    param["enable_supply_limit_gas"] = False
-    param["supply_limit_gas"]        = 100000 # kWh/a
-
-
-    # Biomass
-    param["enable_supply_biomass"]    = False
-    param["price_biomass"]            = 0.2  # EUR/kWh
-    param["enable_supply_limit_biom"] = False
-    param["supply_limit_biomass"]     = 100000  #kWh
-
-
-    # Hydrogen
-    param["enable_supply_hydrogen"]       = False
-    param["price_hydrogen"]               = 0.4  # EUR/kWh
-    param["enable_supply_limit_hydrogen"] = False
-    param["supply_limit_hydrogen"]        = 100000  #kWh
-
-
-    # Waste
-    param["enable_supply_waste"]       = False
-    param["price_waste"]               = 0.05  # EUR/kWh
-    param["enable_supply_limit_waste"] = False
-    param["supply_limit_waste"]        = 100000  #kWh
-
-
-    ### Ecological impact ###
-    param["co2_tax"]         = 180 / 1000  # EUR/kg
-    param["co2_el_grid"]     = 0.4 # kg/kWh
-    param["co2_el_feed_in"]  = 0.3 # kg/kWh
-    param["co2_gas"]         = 0.2 # kg/kWh
-    param["co2_gas_feed_in"] = 0.2 # kg/kWh
-    param["co2_biom"]        = 0.6 # kg/kWh
-    param["co2_waste"]       = 0.7 / 1000  # kg/kWh
-    param["co2_hydrogen"]    = 0.4 / 1000  # kg/kWh
-
-
-    ### General ###
-    param["optim_focus"]       = 0
-    param["interest_rate"]     = 0.05
-    param["observation_time"]  = 20
-    param["peak_dem_met_conv"] = True
-
-    ### Reference scenario ###
-    param["ref"] = {}
-    param["ref"]["enable_hp"]  = True
-    param["ref"]["cop_hp"]     = 5
-    param["ref"]["cop_cc"]     = 5
-    param["ref"]["enable_chp"] = False
+    param.update(data_param)
 
 
     ################################################################
@@ -536,8 +229,6 @@ def load_params():
     result_dict = calc_monthly_dem(dem_uncl, param_uncl, result_dict)
 
     return param, devs, dem, result_dict
-
-
 
 #%% SUB-FUNCTIONS ##################################################
 
@@ -867,6 +558,55 @@ def calc_reference(devs, dem, param, dem_uncl, result_dict):
 
 
 def calc_annual_investment(devs, param):
+    """
+    Calculation of total investment costs including replacements (based on VDI 2067, page 1).
+
+    Parameters
+    ----------
+    dev : dictionary
+        technology parameter
+    param : dictionary
+        economic parameters
+
+    Returns
+    -------
+    annualized fix and variable investment
+    """
+
+    observation_time = param["observation_time"]
+    interest_rate = param["interest_rate"]
+    q = 1 + interest_rate
+
+    # Calculate capital recovery factor (CRF)
+    CRF = ((q**observation_time) * interest_rate) / ((q**observation_time) - 1)
+    
+    # Save CRF in param for use in the optimization model
+    param["CRF"] = CRF
+    
+    # You can calculate residual values or any other necessary parameters if needed
+    for device in devs.keys():
+
+        try:
+            life_time = devs[device]["life_time"]
+        except IndexError:
+            print(f"Device {device} does not have a 'life_time' attribute.")
+ 
+
+        
+        # Formula given in the Simualtionsfahrplan.docx file
+        # T_clc = observation_time
+
+        n = int(observation_time / life_time)
+        rval = (sum((interest_rate/q)**(i * life_time) for i in range(0, n+1)) - 
+                ((interest_rate**(n * life_time) * ((n+1) * life_time - observation_time)) / (life_time * q**observation_time)))
+        
+        devs[device]["res_value"] = rval
+
+        devs[device]["ann_factor"] = (1 - rval) * CRF
+
+    return devs, param
+
+def calc_annual_investment_old(devs, param):
     """
     Calculation of total investment costs including replacements (based on VDI 2067-1, pages 16-17).
 

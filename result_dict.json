@@ -17,8 +17,8 @@
         "gas_costs": 0.0,
         "el_costs": 5329950.0,
         "co2_costs": 0.0,
-        "invest_om": 685621.1918773015,
-        "tac": 6015571,
+        "invest_om": 469273.4224777139,
+        "tac": 5799223,
         "co2": 14213,
         "enable_chp": false,
         "enable_hp": true

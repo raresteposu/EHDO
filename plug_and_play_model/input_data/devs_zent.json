@@ -1,0 +1,43 @@
+{
+    "PV": {
+        "eta": 0.18,
+        "inv_var": 1314,
+        "cost_om": 0.02
+    },
+    "STC": {
+        "eta": 0.45,
+        "inv_var": 650,
+        "cost_om": 0.02
+    },
+    "CHP": {
+        "inv_var": 1088,
+        "eta_el": 0.42,
+        "eta_th": 0.44,
+        "cost_om": 0.06
+    },
+    "BOI": {
+        "inv_var": 119,
+        "eta_th": 0.95,
+        "cost_om": 0.005
+    },
+    "HP": {
+        "inv_var": 782,
+        "life_time": 20,
+        "cost_om": 0.03
+    },
+    "EB": {
+        "inv_var": 188
+    },
+    "BCHP": {
+        "inv_var": 1612,
+        "eta_el": 0.42,
+        "eta_th": 0.99,
+        "cost_om": 0.04
+    },
+    "BBOI": {
+        "inv_var": 250
+    },
+    "BAT": {
+        "inv_var": 900
+    }
+}
