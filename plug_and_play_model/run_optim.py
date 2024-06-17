@@ -89,7 +89,9 @@ years = ["reference", "2024", "2030", "2040", "2045"]
 building = "reference"
 size = "reference"
 year = "reference"
-devices_to_use = ["HP", "BOI", "CHP", "PV", "BAT"] # Feasible devices
+
+#TODO: CHP nu ajunge dintr-un anume motiv pentru heating. Dacă nu ai HP sau BOI nu reușește. E chiar așa ineficient?
+devices_to_use = ["BOI","CHP", "PV", "BAT", "TS", "ELYZ", "AC", "BHCP", "STC"] # Feasible devices
 
 param, devs, dem, result_dict = load_params.load_params(building, size, year, devices_to_use)
 

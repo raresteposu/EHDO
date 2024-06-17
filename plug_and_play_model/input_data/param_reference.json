@@ -39,7 +39,7 @@
     "co2_hydrogen": 0.0004,
     "optim_focus": 0,
     "interest_rate": 0.05,
-    "observation_time": 10,
+    "observation_time": 40,
     "peak_dem_met_conv": true,
     "ref": {
         "enable_hp": true,

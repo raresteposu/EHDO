@@ -1,0 +1,11 @@
+\ Model Energy_hub_model_copy
+\ LP format - for model browsing. Use MPS format to capture full model detail.
+Minimize
+ 
+Subject To
+ R54773: nominal_capacity_ELYZ >= 134.1013313
+ R98666: 0.0291390805830175 nominal_capacity_ELYZ + investment_costs_ELYZ
+   = 0
+Bounds
+ nominal_capacity_ELYZ free
+End

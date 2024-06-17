@@ -14,6 +14,7 @@ Contact:        Marco Wirtz
 
 """
 
+import copy
 import json
 import numpy as np
 import math
@@ -22,6 +23,7 @@ import time
 import os
 import csv
 import solar_modeling
+from optim_model import run_optim  # Ensure this import is at the top of your fileE
 
 def load_params(building, size, year, devices_to_use):
 
@@ -36,13 +38,13 @@ def load_params(building, size, year, devices_to_use):
     # print(f"Current working directory: {current_working_directory}")
 
     ################################################################
-    # GENERAL PARAMETERS
+    #%%  GENERAL PARAMETERS
 
     param["c_w"] = 4.18  # kJ/(kgK)
     param["rho_w"] = 1000  # kg/m3
 
-    ################################################################
-    # LOAD WEATHER DATA
+    #################################################################
+    #%%  LOAD WEATHER DATA
 
     header = {}
     with open(os.path.join(path_input_data, "DEU_Dusseldorf.104000_IWEC.epw"), newline="", errors="ignore") as csvfile:
@@ -65,7 +67,7 @@ def load_params(building, size, year, devices_to_use):
     param_uncl["wind_speed"] = wind_speed
 
     ################################################################
-    # LOAD DEMANDS
+    #%%  LOAD DEMANDS
 
     dem_uncl = {}
 
@@ -79,7 +81,7 @@ def load_params(building, size, year, devices_to_use):
 
 
     ################################################################
-    # DESIGN DAY CLUSTERING
+    #%%  DESIGN DAY CLUSTERING
 
     param["n_clusters"] = 8  # Number of design days
 
@@ -136,7 +138,7 @@ def load_params(building, size, year, devices_to_use):
     #    param[k] = series_clustered
 
     ################################################################
-    # LOAD TECHNICAL PARAMETERS
+    #%%  LOAD TECHNICAL PARAMETERS
 
     devs = {}
     
@@ -164,6 +166,7 @@ def load_params(building, size, year, devices_to_use):
             devs[device]["feasible"] = False
         else:
             devs[device]["feasible"] = True
+
     
     devs["PV"]["norm_power"] = solar_modeling.pv_system(direct_tilted_irrad = param["GHI"] - param["DHI"],
                                                  diffuse_tilted_irrad = param["DHI"],
@@ -198,10 +201,15 @@ def load_params(building, size, year, devices_to_use):
     devs["TES"]["max_cap"] = 100000 * param["rho_w"] * param["c_w"] * deltaT / 3600 # kWh
     devs["TES"]["delta_T"] = deltaT # K
 
+    devs["CTES"]["inv_var"] = 500 / (param["rho_w"] * param["c_w"] * deltaT / 3600) # EUR/kWh
+    devs["CTES"]["min_cap"] = 0 * param["rho_w"] * param["c_w"] * deltaT / 3600 # kWh
+    devs["CTES"]["max_cap"] = 100000 * param["rho_w"] * param["c_w"] * deltaT / 3600 # kWh
+    devs["CTES"]["delta_T"] = deltaT # K
+
 
 
     ################################################################
-    # LOAD MODEL PARAMETERS
+    #%%  LOAD MODEL PARAMETERS
 
 
     param_path = ".\\plug_and_play_model\\input_data\\param_"+year+".json"
@@ -212,18 +220,13 @@ def load_params(building, size, year, devices_to_use):
 
 
     ################################################################
-    # INITIALIZE CALCULATION
+    #%%  INITIALIZE CALCULATION
 
     # Calculate annual investments
     devs, param = calc_annual_investment(devs, param)
 
     # Calculate reference scenario
-    result_dict = calc_reference(devs, dem, param, dem_uncl, result_dict)
-
-    # print("=== PARAMETER ===")
-    # print(param)
-    # print("=== TECHNOLOGIES ===")
-    # print(devs)
+    # result_dict = calc_reference(devs, dem, param, dem_uncl, result_dict)
 
     # Calculate values for post-processing
     result_dict = calc_monthly_dem(dem_uncl, param_uncl, result_dict)
@@ -231,6 +234,8 @@ def load_params(building, size, year, devices_to_use):
     return param, devs, dem, result_dict
 
 #%% SUB-FUNCTIONS ##################################################
+
+import optim_model as optim_model
 
 
 def calc_reference(devs, dem, param, dem_uncl, result_dict):
@@ -577,81 +582,55 @@ def calc_annual_investment(devs, param):
     interest_rate = param["interest_rate"]
     q = 1 + interest_rate
 
-    # Calculate capital recovery factor (CRF)
+    # Capital recovery factor (CRF)
     CRF = ((q**observation_time) * interest_rate) / ((q**observation_time) - 1)
-    
-    # Save CRF in param for use in the optimization model
+
     param["CRF"] = CRF
     
-    # You can calculate residual values or any other necessary parameters if needed
     for device in devs.keys():
 
         try:
             life_time = devs[device]["life_time"]
         except IndexError:
-            print(f"Device {device} does not have a 'life_time' attribute.")
+            raise ValueError(f"Life time for device {device} is not defined.")
  
 
-        
-        # Formula given in the Simualtionsfahrplan.docx file
-        # T_clc = observation_time
-
         n = int(observation_time / life_time)
-        rval = (sum((interest_rate/q)**(i * life_time) for i in range(0, n+1)) - 
-                ((interest_rate**(n * life_time) * ((n+1) * life_time - observation_time)) / (life_time * q**observation_time)))
         
-        devs[device]["res_value"] = rval
+        rval = (sum((interest_rate/q)**(i * life_time) for i in range(0, n+1)) - 
+                ((interest_rate**(n * life_time) * ((n+1) * life_time - observation_time)) / (life_time * q**observation_time))) # Simualtionsfahrplan.docx | T_clc = observation_time
+        
+        # TODO: Ce e r? Ce e rate?
 
-        devs[device]["ann_factor"] = (1 - rval) * CRF
+        r = interest_rate
+        rate = interest_rate
 
-    return devs, param
+        rval = (sum((rate/q)**(n * life_time) for n in range(0, n+1)) -
+        ((r**(n * life_time) * ((n+1) * life_time - observation_time)) / (life_time * q**observation_time)))
 
-def calc_annual_investment_old(devs, param):
-    """
-    Calculation of total investment costs including replacements (based on VDI 2067-1, pages 16-17).
+        
 
-    Parameters
-    ----------
-    dev : dictionary
-        technology parameter
-    param : dictionary
-        economic parameters
-
-    Returns
-    -------
-    annualized fix and variable investment
-    """
-
-    observation_time = param["observation_time"]
-    interest_rate = param["interest_rate"]
-    q = 1 + param["interest_rate"]
-
-    # Calculate capital recovery factor
-    CRF = ((q**observation_time)*interest_rate)/((q**observation_time)-1)
-
-    # Calculate annuity factor for each device
-    for device in devs.keys():
-
-        # Get device life time
-        life_time = devs[device]["life_time"]
-
-        # Number of required replacements
-        n = int(math.floor(observation_time / life_time))
-
-        # Investment for replacements
         invest_replacements = sum((q ** (-i * life_time)) for i in range(1, n+1))
 
-        # Residual value of final replacement
-        res_value = ((n+1) * life_time - observation_time) / life_time * (q ** (-observation_time))
+        print("Device: ", device)
+        print("Life time: ", life_time)
+        print("Observation time: ", observation_time)
+        print("n: ", n)
+        print("---")
+        print("CRF: ", CRF)
+        print("Interest rate: ", interest_rate)
+        print("Rval: ", rval)
+        print("Investment replacements: ", invest_replacements)
+        print("")
+        print("")
 
-        # Calculate annualized investments
         if life_time > observation_time:
-            devs[device]["ann_factor"] = (1 - res_value) * CRF
+            devs[device]["ann_factor"] = (1 - rval) * CRF
         else:
-            devs[device]["ann_factor"] = ( 1 + invest_replacements - res_value) * CRF
+            #TODO: Nu modifică cu nimic rezultatele
+            devs[device]["ann_factor"] = ( 1 + invest_replacements - rval) * CRF
 
-    # Save capital recovery factor
-    param["CRF"] = CRF
+        devs[device]["res_value"] = rval
 
     return devs, param
 

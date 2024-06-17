@@ -1,96 +1,95 @@
 {
-    "ref": {
-        "heat_hp_total": 6814,
-        "el_chp_total": 0,
-        "heat_boi_total": 0,
-        "cool_cc_total": 7501,
-        "hydrogen_elyz_total": 322,
-        "el_dem_total": 35533,
-        "gas_dem_total": 0,
-        "chp_cap": 0,
-        "hp_cap": 2698,
-        "boiler_cap": 0,
-        "chiller_cap": 6854,
-        "elyz_cap": 191,
-        "el_grid_cap": 14017.883891743739,
-        "gas_grid_cap": 0.0,
-        "gas_costs": 0.0,
-        "el_costs": 5329950.0,
-        "co2_costs": 0.0,
-        "invest_om": 469273.4224777139,
-        "tac": 5799223,
-        "co2": 14213,
-        "enable_chp": false,
-        "enable_hp": true
-    },
-    "monthly_dem": {
-        "heat": {
-            "Jan": 1152.5400899999995,
-            "Feb": 974.3465900000008,
-            "Mar": 671.1773999999999,
-            "Apr": 454.3837599999996,
-            "May": 304.8094700000005,
-            "Jun": 272.63411000000235,
-            "Jul": 298.3868300000015,
-            "Aug": 273.8780800000014,
-            "Sep": 306.1785800000003,
-            "Oct": 411.02428000000026,
-            "Nov": 630.2412199999989,
-            "Dec": 1064.6940900000004
+    "devices": {
+        "PV": {
+            "cap": 1800.0,
+            "curtailed": 0,
+            "generated": 1374283,
+            "full_load_hours": 763
         },
-        "cool": {
-            "Jan": 116.10402,
-            "Feb": 112.20461999999996,
-            "Mar": 232.38427000000007,
-            "Apr": 289.6897800000004,
-            "May": 635.7376999999999,
-            "Jun": 1421.7191099999993,
-            "Jul": 1844.7124999999996,
-            "Aug": 1519.8679199999992,
-            "Sep": 795.6454099999999,
-            "Oct": 281.02153000000015,
-            "Nov": 136.02449000000016,
-            "Dec": 116.21100999999989
+        "STC": {
+            "cap": 4500.0,
+            "curtailed": 1,
+            "generated": 3013070,
+            "full_load_hours": 669
         },
-        "power": {
-            "Jan": 2818.175981420901,
-            "Feb": 2467.8406159104015,
-            "Mar": 2719.2531269822007,
-            "Apr": 2599.446977463397,
-            "May": 2811.3135419587024,
-            "Jun": 2602.8909561623996,
-            "Jul": 2718.996723571049,
-            "Aug": 2817.4223405930684,
-            "Sep": 2512.3650720601013,
-            "Oct": 2809.8684467891994,
-            "Nov": 2707.639255397301,
-            "Dec": 2625.192840657201
+        "AC": {
+            "cap": 10000.0,
+            "generated": 7501322,
+            "full_load_hours": 750
         },
-        "hydrogen": {
-            "Jan": 28.181759814208974,
-            "Feb": 24.678406159103954,
-            "Mar": 27.19253126982199,
-            "Apr": 25.994469774634002,
-            "May": 28.113135419587053,
-            "Jun": 26.028909561623998,
-            "Jul": 27.189967235710995,
-            "Aug": 28.17422340593102,
-            "Sep": 25.123650720601024,
-            "Oct": 28.098684467892014,
-            "Nov": 27.076392553972994,
-            "Dec": 26.251928406572027
+        "CHP": {
+            "cap": 10000.0,
+            "generated": 0,
+            "full_load_hours": 0
+        },
+        "BOI": {
+            "cap": 10000.0,
+            "generated": 16303427,
+            "full_load_hours": 1630
+        },
+        "ELYZ": {
+            "cap": 10000.0,
+            "generated": 460148,
+            "full_load_hours": 46
+        },
+        "BAT": {
+            "cap": 10000.0,
+            "generated": 0,
+            "full_load_hours": 0,
+            "charge_cycles": 216
         }
     },
-    "year_peak": {
-        "heat": 2698,
-        "cool": 6854,
-        "power": 13410,
-        "hydrogen": 134
+    "total_costs": {
+        "Description": "Total investment costs in EUR",
+        "total_annualized_costs": 6220956,
+        "total_inv_cost": 0,
+        "total_ann_inv_cost": 0,
+        "total_om_cost": 0
     },
-    "year_sum": {
-        "heat": 6814,
-        "cool": 7501,
-        "power": 32210,
-        "hydrogen": 322
-    }
+    "co2_emissions": {
+        "Description": "Total CO2 emissions in kg/a",
+        "total_co2_emissions": 15950808,
+        "onsite": 3432300,
+        "credit_feedin": 0,
+        "el": 12518508,
+        "el_feed_in": 0,
+        "gas": 3432300,
+        "gas_feed_in": 0,
+        "biom": 0,
+        "waste": 0,
+        "hydrogen": 0,
+        "tax_total": 617814000
+    },
+    "grid_flows": {
+        "Description": "Total grid flows in kWh/a",
+        "from_el_grid_total": 31296270,
+        "to_el_grid_total": 0,
+        "from_gas_grid_total": 17161502,
+        "to_gas_grid_total": 0,
+        "biom_import_total": 0,
+        "waste_import_total": 0,
+        "hydrogen_import_total": 0,
+        "max_el_from_grid": 13307,
+        "max_gas_from_grid": 6461,
+        "max_el_to_grid": 0,
+        "max_gas_to_grid": 0,
+        "max_biom": 0,
+        "max_waste": 0,
+        "max_hydrogen": 0
+    },
+    "supply_costs": {
+        "Description": "Total supply costs in EUR",
+        "supply_costs_el": 4694440,
+        "cap_costs_el": 0,
+        "total_el_costs": 4694440,
+        "rev_feed_in_el": 0,
+        "supply_costs_gas": 858075,
+        "cap_costs_gas": 0,
+        "total_gas_costs": 858075,
+        "rev_feed_in_gas": 0,
+        "supply_costs_biom": 0,
+        "supply_costs_waste": 0,
+        "supply_costs_hydrogen": 0
+    },
+    "percent_of_renewable_sources": 8.3
 }
