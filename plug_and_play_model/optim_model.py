@@ -36,29 +36,34 @@ def run_optim(devs, param, dem, result_dict):
 
     # Create set for devices
     all_devs = ["PV", "WT", "STC", "WAT",
-                "HP", "EB", "CC", "AC",
+                "HP", "EB", "CC", "AC", 
                 "CHP", "BOI", "GHP",
                 "BCHP", "BBOI", "WCHP", "WBOI",
-                "ELYZ", "FC", "H2S", "SAB",
-                "TES", "CTES", "BAT", "GS",
+                "ELYZ", "FC", "H2S", "SAB",                
+                "TES", "CTES", "BAT", "GS",  
                 ]
-
+   
     #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     # Set up model and create variables
 
     # Create a new model
     model = gp.Model("Energy_hub_model")
-
+    
+    # Purchase decision binary variables (1 if device is installed, 0 otherwise)
+    x = {}
+    for device in all_devs:
+        x[device] = model.addVar(vtype="B", name="x_" + str(device))
+        
     # Device's capacity (i.e. rated power)
     cap = {}
     for device in all_devs:
         cap[device] = model.addVar(vtype="C", name="nominal_capacity_" + str(device))
-
+        
     # Roof area used for PV and solar thermal collector installation
     area = {}
     for device in ["PV", "STC"]:
         area[device] = model.addVar(vtype = "C", name="roof_area_" + str(device))
-
+        
     # Gas flow to/from devices
     gas = {}
     for device in ["CHP", "BOI", "GHP", "SAB", "from_grid", "to_grid"]:
@@ -67,7 +72,7 @@ def run_optim(devs, param, dem, result_dict):
             gas[device][d] = {}
             for t in time_steps:
                 gas[device][d][t] = model.addVar(vtype="C", name="gas_" + device + "_d" + str(d) + "_t" + str(t))
-
+    
     # Electric power to/from devices
     power = {}
     for device in ["PV", "WT", "WAT", "HP", "EB", "CC", "CHP", "BCHP", "WCHP", "ELYZ", "FC", "from_grid", "to_grid"]:
@@ -76,7 +81,7 @@ def run_optim(devs, param, dem, result_dict):
             power[device][d] = {}
             for t in time_steps:
                 power[device][d][t] = model.addVar(vtype="C", name="power_" + device + "_d" + str(d) + "_t" + str(t))
-
+       
     # Heat to/from devices
     heat = {}
     for device in ["STC", "HP", "EB", "AC", "CHP", "BOI", "GHP", "BCHP", "BBOI", "WCHP", "WBOI", "FC"]:
@@ -85,7 +90,7 @@ def run_optim(devs, param, dem, result_dict):
             heat[device][d] = {}
             for t in time_steps:
                 heat[device][d][t] = model.addVar(vtype="C", name="heat_" + device + "_d" + str(d) + "_t" + str(t))
-
+    
     # Cooling power to/from devices
     cool = {}
     for device in ["CC", "AC"]:
@@ -94,7 +99,7 @@ def run_optim(devs, param, dem, result_dict):
             cool[device][d] = {}
             for t in time_steps:
                 cool[device][d][t] = model.addVar(vtype="C", name="cool_" + device + "_d" + str(d) + "_t" + str(t))
-
+                
     # Hydrogen to/from devices
     hydrogen = {}
     for device in ["ELYZ", "FC", "SAB", "import"]:
@@ -103,7 +108,7 @@ def run_optim(devs, param, dem, result_dict):
             hydrogen[device][d] = {}
             for t in time_steps:
                 hydrogen[device][d][t] = model.addVar(vtype="C", name="hydrogen_" + device + "_d" + str(d) + "_t" + str(t))
-
+                
     # Biomass to devices
     biom = {}
     for device in ["BCHP", "BBOI", "import"]:
@@ -112,7 +117,7 @@ def run_optim(devs, param, dem, result_dict):
             biom[device][d] = {}
             for t in time_steps:
                 biom[device][d][t] = model.addVar(vtype="C", name="biom_" + device + "_d" + str(d) + "_t" + str(t))
-
+                
     # Waste to devices
     waste = {}
     for device in ["WCHP", "WBOI", "import"]:
@@ -138,81 +143,80 @@ def run_optim(devs, param, dem, result_dict):
             for t in time_steps:
                 soc[device][day][t] = model.addVar(vtype="C", name="soc_" + device + "_d" + str(day) + "_t" + str(t))
 
-    # Variables for annual device costs
+    # Variables for annual device costs     
+    
     inv = {}
     c_inv = {}
     c_om = {}
-    c_dem = {}
     c_total = {}
+    c_dem = {}
     for device in all_devs:
         inv[device] = model.addVar(vtype = "C", name="investment_costs_" + device)
-
+    for device in all_devs:
         c_inv[device] = model.addVar(vtype = "C", name="annual_investment_costs_" + device)
-
+    for device in all_devs:
         c_om[device] = model.addVar(vtype = "C", name="om_costs_" + device)
-
-        c_dem[device] = model.addVar(vtype = "C", name="demand_costs_" + device)
-
-        c_total[device] = model.addVar(vtype = "C", name="total_annual_costs_" + device)
+    for device in all_devs:
+        c_dem[device] = model.addVar(vtype = "C", name="demand_related_costs_" + device)
+    for device in all_devs:
+        c_total[device] = model.addVar(vtype = "C", name="total_annual_costs_" + device)   
 
     # Capacity of grid connections (gas and electricity)
-    grid_limit_el  = model.addVar(vtype = "C", name="grid_limit_el")
-    grid_limit_gas = model.addVar(vtype = "C", name="grid_limit_gas")
-
+    grid_limit_el  = model.addVar(vtype = "C", name="grid_limit_el")  
+    grid_limit_gas = model.addVar(vtype = "C", name="grid_limit_gas")    
+    
     # Total energy amounts taken from grid and fed into grid
     from_el_grid_total = model.addVar(vtype = "C", name="from_el_grid_total")
     to_el_grid_total   = model.addVar(vtype = "C", name="to_el_grid_total")
-
+    
     from_gas_grid_total = model.addVar(vtype = "C", name="from_gas_grid_total")
     to_gas_grid_total   = model.addVar(vtype = "C", name="to_gas_grid_total")
-
+    
     biom_import_total     = model.addVar(vtype = "C", name="biom_import_total")
     waste_import_total    = model.addVar(vtype = "C", name="waste_import_total")
     hydrogen_import_total = model.addVar(vtype = "C", name="hydrogen_import_total")
-
+    
     # Total revenue for feed-in
     rev_feed_in_gas = model.addVar(vtype="C", name="rev_feed_in_gas")
     rev_feed_in_el  = model.addVar(vtype="C", name="rev_feed_in_el")
 
     # Electricity/gas/biomass costs
-    supply_costs_el       = model.addVar(vtype = "C", name="supply_costs_el")
-    cap_costs_el          = model.addVar(vtype = "C", name="cap_costs_el")
-    supply_costs_gas      = model.addVar(vtype = "C", name="supply_costs_gas")
-    cap_costs_gas         = model.addVar(vtype = "C", name="cap_costs_gas")
-    supply_costs_biom     = model.addVar(vtype = "C", name="supply_costs_biomass")
-    supply_costs_waste    = model.addVar(vtype = "C", lb=-gp.GRB.INFINITY, name="supply_costs_waste")
-    supply_costs_hydrogen = model.addVar(vtype = "C", name="supply_costs_hydrogen")
-
+    supply_costs_el       = model.addVar(vtype = "C", name="supply_costs_el")    
+    cap_costs_el          = model.addVar(vtype = "C", name="cap_costs_el")    
+    supply_costs_gas      = model.addVar(vtype = "C", name="supply_costs_gas")    
+    cap_costs_gas         = model.addVar(vtype = "C", name="cap_costs_gas")    
+    supply_costs_biom     = model.addVar(vtype = "C", name="supply_costs_biomass")   
+    supply_costs_waste    = model.addVar(vtype = "C", lb=-gp.GRB.INFINITY, name="supply_costs_waste")   
+    supply_costs_hydrogen = model.addVar(vtype = "C", name="supply_costs_hydrogen")       
+    
     #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     # Objective functions
     obj = {}
     obj["tac"] = model.addVar(vtype="C", lb=-gp.GRB.INFINITY, name="total_annualized_costs")
     obj["co2"] = model.addVar(vtype="C", lb=-gp.GRB.INFINITY, name="total_CO2")
 
-    #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    # Assign objective function
+    #%% Assign objective function
+
     model.update()
     model.setObjective((1-param["optim_focus"]) * obj["tac"]
                         + param["optim_focus"]  * obj["co2"], gp.GRB.MINIMIZE)
 
 
-    #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    # Add constraints
-
-    #%% Constraints defined by user in GUI
+    #%% Constraints
 
     for device in all_devs:
-        if devs[device]["feasible"] == False:
-            model.addConstr(cap[device] == 0)
-
-
+        if devs[device]["feasible"] == True:
+            model.addConstr(x[device] == 1)
+        else:
+            model.addConstr(x[device] == 0)
+            
+      
     #%% CONTINUOUS SIZING OF DEVICES: minimum capacity <= capacity <= maximum capacity
-
+    
     for device in ["WT", "WAT", "HP", "EB", "CC", "AC", "CHP", "BOI", "GHP", "BCHP", "BBOI", "WCHP", "WBOI", "ELYZ", "FC", "H2S", "SAB", "TES", "CTES", "BAT", "GS"]:  # PV/STC is not listed due to min_area/max_area.
-        if devs[device]["feasible"]:
-            model.addConstr(cap[device] >= devs[device]["min_cap"])
-            model.addConstr(cap[device] <= devs[device]["max_cap"])
-
+        model.addConstr(cap[device] >= x[device] * devs[device]["min_cap"])
+        model.addConstr(cap[device] <= x[device] * devs[device]["max_cap"])
+        
     for d in days:
         for t in time_steps:
             for device in ["STC", "EB", "HP", "BOI", "GHP", "BBOI", "WBOI"]:
@@ -223,147 +227,134 @@ def run_optim(devs, param, dem, result_dict):
 
             for device in ["CC", "AC"]:
                 model.addConstr(cool[device][d][t] <= cap[device])
-
+                
             for device in ["SAB"]:
                 model.addConstr(gas[device][d][t] <= cap[device])
-
-            # Limitation of power from and to grid
+                
+            # Limitation of power from and to grid   
             for device in ["from_grid", "to_grid"]:
                 model.addConstr(power[device][d][t] <= grid_limit_el)
-                model.addConstr(gas[device][d][t]   <= grid_limit_gas)
+                model.addConstr(gas[device][d][t]   <= grid_limit_gas)    
 
             # PV and STC: minimum area < used roof area <= maximum area
-            for device in ["PV", "STC"]:
-                if devs[device]["feasible"]:
-                    model.addConstr(area[device] >= devs[device]["min_area"])
-                    model.addConstr(area[device] <= devs[device]["max_area"])
-
+            for device in ["PV", "STC"]:            
+                model.addConstr(area[device] >= x[device] * devs[device]["min_area"])
+                model.addConstr(area[device] <= x[device] * devs[device]["max_area"])
+            
             # Correlation between PV area and peak power; cap["PV"] is only needed for calculating investment costs
             model.addConstr(cap["PV"] == area["PV"] * devs["PV"]["G_stc"] * devs["PV"]["eta"])
-
+            
             # Correlation between STC area and peak power; cap["STC"] is only needed for calculating investment costs
             model.addConstr(cap["STC"] == area["STC"] * devs["STC"]["G_stc"] * devs["STC"]["eta"])
-
-
-
+            
+                
+        
     # state of charge < storage capacity
     for device in ["TES", "CTES", "BAT", "H2S", "GS"]:
         for day in year:
-            for t in time_steps:
+            for t in time_steps:    
                 model.addConstr(soc[device][day][t] <= cap[device])
 
     #%% INPUT / OUTPUT CONSTRAINTS
-
+    
     for d in days:
         for t in time_steps:
-
+            
             # Photovoltaics
-            # Correlation between area and peek power is used
-            model.addConstr(power["PV"][d][t] <= devs["PV"]["norm_power"][d][t] * devs["PV"]["G_stc"] * devs["PV"]["eta"] * area["PV"])
-
+            model.addConstr(power["PV"][d][t] <= param["GHI"][d][t]/1e3 * devs["PV"]["eta"] * area["PV"])
+            
             # Wind turbine
             model.addConstr(power["WT"][d][t] <= devs["WT"]["norm_power"][d][t] * cap["WT"])
-
+            
             # Hydropower
             model.addConstr(power["WAT"][d][t] <= devs["WAT"]["potential"])
-
+            
             # Solar thermal collector
-            model.addConstr(heat["STC"][d][t] <= devs["STC"]["specific_heat"][d][t] * area["STC"])
-
+            model.addConstr(heat["STC"][d][t] <= param["GHI"][d][t]/1e3 * devs["STC"]["eta"] * area["STC"])
+        
             # Electric heat pump
             model.addConstr(heat["HP"][d][t] == power["HP"][d][t] * devs["HP"]["COP"][d][t])
-
+            
             # Electric boiler
             model.addConstr(heat["EB"][d][t] == power["EB"][d][t] * devs["EB"]["eta_th"])
-
+            
             # Compression chiller
-            model.addConstr(cool["CC"][d][t] == power["CC"][d][t] * devs["CC"]["COP"])
-
+            model.addConstr(cool["CC"][d][t] == power["CC"][d][t] * devs["CC"]["COP"])  
+    
             # Absorption chiller
             model.addConstr(cool["AC"][d][t] == heat["AC"][d][t] * devs["AC"]["eta_th"])
-
+            
             # Gas CHP
             model.addConstr(power["CHP"][d][t] == gas["CHP"][d][t] * devs["CHP"]["eta_el"])
             model.addConstr(heat["CHP"][d][t] == gas["CHP"][d][t] * devs["CHP"]["eta_th"])
-
+            
             # Gas boiler
             model.addConstr(heat["BOI"][d][t] == gas["BOI"][d][t] * devs["BOI"]["eta_th"])
-
+            
             # Gas heat pump
             model.addConstr(heat["GHP"][d][t] == gas["GHP"][d][t] * devs["GHP"]["COP"])
-
+            
             # Biomass CHP
             model.addConstr(power["BCHP"][d][t] == biom["BCHP"][d][t] * devs["BCHP"]["eta_el"])
             model.addConstr(heat["BCHP"][d][t] == biom["BCHP"][d][t] * devs["BCHP"]["eta_th"])
-
+            
             # Biomass boiler
             model.addConstr(heat["BBOI"][d][t] == biom["BBOI"][d][t] * devs["BBOI"]["eta_th"])
-
+                        
             # Waste CHP
             model.addConstr(power["WCHP"][d][t] == waste["WCHP"][d][t] * devs["WCHP"]["eta_el"])
             model.addConstr(heat["WCHP"][d][t] == waste["WCHP"][d][t] * devs["WCHP"]["eta_th"])
-
+            
             # Waste boiler
             model.addConstr(heat["WBOI"][d][t] == waste["WBOI"][d][t] * devs["WBOI"]["eta_th"])
-
+            
             # Electrolyzer
             model.addConstr(hydrogen["ELYZ"][d][t] == power["ELYZ"][d][t] * devs["ELYZ"]["eta_el"])
-
-            # Fuel cell
+            
+            # Fuel cell  
             model.addConstr(power["FC"][d][t] == hydrogen["FC"][d][t] * devs["FC"]["eta_el"])
             if devs["FC"]["enable_heat_diss"]:   # Heat can also be dissipated
                 model.addConstr(heat["FC"][d][t] <= hydrogen["FC"][d][t] * devs["FC"]["eta_th"])
             else:   # Heat must be used
                 model.addConstr(heat["FC"][d][t] == hydrogen["FC"][d][t] * devs["FC"]["eta_th"])
-
+            
             # Sabatier reactor
             model.addConstr(gas["SAB"][d][t] == hydrogen["SAB"][d][t] * devs["SAB"]["eta"])
-
-
+            
+    
     #%% GLOBAL ENERGY BALANCES
-
+    
     for d in days:
         for t in time_steps:
-
+            
             # Heating balance
-            model.addConstr(
-                heat["STC"][d][t] + heat["HP"][d][t] + heat["EB"][d][t] + heat["CHP"][d][t] + heat["BOI"][d][t] + heat["GHP"][d][t] + heat["BCHP"][d][t] + heat["BBOI"][d][t]+ heat["WCHP"][d][t] + heat["WBOI"][d][t] + heat["FC"][d][t] == dem["heat"][d][t] + heat["AC"][d][t] + ch["TES"][d][t])
-
+            model.addConstr(heat["STC"][d][t] + heat["HP"][d][t] + heat["EB"][d][t] + heat["CHP"][d][t] + heat["BOI"][d][t] + heat["GHP"][d][t] + heat["BCHP"][d][t] + heat["BBOI"][d][t]+ heat["WCHP"][d][t] + heat["WBOI"][d][t] + heat["FC"][d][t] == dem["heat"][d][t] + heat["AC"][d][t] + ch["TES"][d][t])
+    
             # Electricity balance
             model.addConstr(power["PV"][d][t] + power["WT"][d][t] + power["WAT"][d][t] + power["CHP"][d][t] + power["BCHP"][d][t] + power["WCHP"][d][t] + power["FC"][d][t] + power["from_grid"][d][t] == dem["power"][d][t] + power["HP"][d][t] + power["EB"][d][t] + power["CC"][d][t] + power["ELYZ"][d][t] + ch["BAT"][d][t] + power["to_grid"][d][t])
-
+    
             # Cooling balance
-            model.addConstr(cool["AC"][d][t] + cool["CC"][d][t] == dem["cool"][d][t] + ch["CTES"][d][t])
-
+            model.addConstr(cool["AC"][d][t] + cool["CC"][d][t] == dem["cool"][d][t] + ch["CTES"][d][t])  
+            
             # Gas balance
             model.addConstr(gas["from_grid"][d][t] + gas["SAB"][d][t] == gas["CHP"][d][t] + gas["BOI"][d][t] + gas["GHP"][d][t] + ch["GS"][d][t] + gas["to_grid"][d][t])
-
+            
             # Hydrogen balance
             model.addConstr(hydrogen["ELYZ"][d][t] + hydrogen["import"][d][t] == dem["hydrogen"][d][t] + hydrogen["FC"][d][t] + hydrogen["SAB"][d][t] + ch["H2S"][d][t])
-
+            
             # Biomass balance
             model.addConstr(biom["import"][d][t] == biom["BCHP"][d][t] + biom["BBOI"][d][t])
-
+            
             # Waste balance
             model.addConstr(waste["import"][d][t] == waste["WCHP"][d][t] + waste["WBOI"][d][t])
-
-
-    # Additional constraints (currently not in use)
-    #for d in days:
-    #    for t in time_steps:
-    #        # AC and TES can only be supplied by BOI, EB, CHP, BCHP and FC    + #heat["BCHP"][d][t]
-    #         model.addConstr(heat["BOI"][d][t] + heat["CHP"][d][t] + heat["FC"][d][t] >= heat["AC"][d][t])  # add EB
-    # CTES can only be supplied by CC and AC
-    #        model.addConstr(cool["AC"][d][t] + cool["CC"][d][t] >= ch["CTES"][d][t])
-
 
     #%% MEET PEAK DEMANDS OF UNCLUSTERED DEMANDS
 
     if param["peak_dem_met_conv"] == False:
-
+        
         # Heating
         model.addConstr(cap["HP"] + cap["EB"]
-                      + cap["CHP"] / devs["CHP"]["eta_el"] * devs["CHP"]["eta_th"]
+                      + cap["CHP"] / devs["CHP"]["eta_el"] * devs["CHP"]["eta_th"] 
                       + cap["BOI"]
                       + cap["GHP"]
                       + cap["BCHP"] / devs["BCHP"]["eta_el"] * devs["BCHP"]["eta_th"]
@@ -372,32 +363,32 @@ def run_optim(devs, param, dem, result_dict):
                       + cap["WBOI"]
                       + cap["FC"] / devs["FC"]["eta_el"] * devs["FC"]["eta_th"]
                       >= param["peak_heat"])
-
+                       
         # Cooling
         model.addConstr(cap["CC"] + cap["AC"] >= param["peak_cool"])
-
+        
         # Power
         model.addConstr(cap["CHP"] + cap["BCHP"] + cap["WCHP"] + cap["FC"] + grid_limit_el >= param["peak_power"])
-
+        
         # Hydrogen
         if (param["enable_supply_hydrogen"] == False) and devs["ELYZ"]["feasible"]:
             model.addConstr(cap["ELYZ"] >= param["peak_hydrogen"])
-
-
+        
+        
     else:  # With STC, PV, WIND, HYDROPOWER (WAT)
-
+        
         # Heating
         model.addConstr(cap["STC"] + cap["HP"] + cap["EB"]
-                      + cap["CHP"] / devs["CHP"]["eta_el"] * devs["CHP"]["eta_th"]
+                      + cap["CHP"] / devs["CHP"]["eta_el"] * devs["CHP"]["eta_th"] 
                       + cap["BOI"]
                       + cap["GHP"]
                       + cap["BCHP"] / devs["BCHP"]["eta_el"] * devs["BCHP"]["eta_th"]
                       + cap["BBOI"]
                       + cap["WCHP"] / devs["WCHP"]["eta_el"] * devs["WCHP"]["eta_th"]
                       + cap["WBOI"]
-                      + cap["FC"] / devs["FC"]["eta_el"] * devs["FC"]["eta_th"]
+                      + cap["FC"] / devs["FC"]["eta_el"] * devs["FC"]["eta_th"] 
                       >= param["peak_heat"])
-
+                       
         # Cooling
         model.addConstr(cap["CC"] + cap["AC"] >= param["peak_cool"])
 
@@ -412,7 +403,7 @@ def run_optim(devs, param, dem, result_dict):
     #%% STORAGE DEVICES
 
     for device in ["TES", "CTES", "BAT", "H2S", "GS"]:
-        for day in year:
+        for day in year:        
             for t in np.arange(1, len(time_steps)):
 
                 # Energy balance: soc(t) = soc(t-1) + charge - discharge
@@ -489,14 +480,14 @@ def run_optim(devs, param, dem, result_dict):
 
     # Limitation of biomass supply (user input)
     if param["enable_supply_biomass"] != True:
-        model.addConstr(biom_import_total == 0)
+        model.addConstr(biom_import_total == 0)    
     if param["enable_supply_limit_biom"] == True:
         model.addConstr(biom_import_total <= param["supply_limit_biom"])
 
     # Limitation of waste supply (user input)
     if param["enable_supply_waste"] != True:
-        model.addConstr(waste_import_total == 0)
-    if param["enable_supply_limit_waste"] == True:
+        model.addConstr(waste_import_total == 0)    
+    if param["enable_supply_limit_waste"] == True:    
         model.addConstr(waste_import_total <= param["supply_limit_waste"])
 
     # Limitation of hydrogen supply (user input)
@@ -508,11 +499,86 @@ def run_optim(devs, param, dem, result_dict):
 
     #%% INVESTMENT COSTS
 
-    #TODO: Yizho a spus că cumva trebuie luat că unele Anlagen nu rezistă mai mult de vreo 10 ani, și atunci trebuie înlocuite, cu costuri din nou. Ești sigur că tu ai implementat asta? 
-    #  - Mai vezi în docx, și vezi life_time, poate trebe schimbat. Știu sigur că la rval era ceva T_cl parcă, vezi dacă ăla trebe egal cu life_time sau altceva (zicea Yizhou ceva de 10 ani)
-    #  - Dacă pui lifte_time la HP = 2, iți dă no feasible solution found (și dacă nu ai boi sau ceva)
+    t_clc = param["observation_time"]
+    rate = param["interest_rate"]
 
-    tax = 1 
+    q = 1 + rate
+    crf = (q ** t_clc * rate) / (q ** t_clc - 1)  # Capital recovery factor
+
+    b = { 
+        #TODO: CAGR | Preisänderungsquotient | Energiepreise.xlsx | ((end_price)/(start_price))^(1/n)
+        "el": 1.0,  
+        "gas": 1.0, 
+        "infl": 1.0,
+
+        # Formula from BuildingOT:
+        #    b = {key: (1 - (prChange[key] / q) ** t_clc) / (q - prChange[key])
+        #       for key in prChange.keys()}
+    }
+
+    rval = {}
+    for device in all_devs:
+        
+        life_time = devs[device]["life_time"]
+        n = int(t_clc / life_time)
+        r = 0.1  # Replacement rate #TODO: Mai citește puțin despre ăsta
+
+        rval[device] = sum((rate/q)**(i * life_time) for i in range(0, n+1)) - ((r**(n * life_time) * ((n+1) * life_time - t_clc)) / (life_time * q**t_clc))
+
+    # Total investment costs
+
+    # !! În BuildingOT inv[device] e specific
+        
+    # Annual investment costs
+    for device in all_devs:
+        # INFO: BuildingOT - inv[device] e specific
+        model.addConstr(c_inv[device] == crf * (1 - rval[device]) * cap[device] * devs[device]["inv_var"])
+        
+    # Operation and maintenance costs
+    for device in all_devs:    
+        # INFO: BuildingOT - f_serv = cost_om   
+        model.addConstr(c_om[device] == crf * b["infl"] * devs[device]["cost_om"] * devs[device]["inv_var"])
+        
+    # Demand related costs
+
+    for device in all_devs:
+
+        gas_devices = {"CHP", "BOI", "GHP", "SAB"} #TODO: De ce arată că nu se cumpără gaz, deși ăstea sunt folosite?
+        el_devices = {"HP", "EB", "CC", "ELYZ", "FC"} #TODO: Aici ar fii bine să pui direct greed-ul
+
+        gas_price = param["price_supply_gas"]
+        el_price = param["price_supply_el"]
+
+        dt = 1
+
+        weight_days = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+
+        if device in gas_devices:
+
+             model.addConstr(c_dem[device] == crf * b["gas"] * gas_price * dt * 
+                             sum(weight_days[d] * sum(gas[device][d][t] for t in time_steps) for d in days))
+            
+        if device in el_devices:
+
+            model.addConstr(c_dem[device] == crf * b["el"] * el_price * dt * 
+                            sum(weight_days[d] * sum(power[device][d][t] for t in time_steps) for d in days))
+            
+
+    # Total annual costs
+    for device in all_devs:
+        model.addConstr(c_total[device] == c_inv[device] + c_om[device] + c_dem[device])
+
+    # HP = 350, cu toate   -> 52110,
+    # HP = 350, fără c_inv -> 26024,
+    # HP = 350, fără c_dem -> 26087,
+
+
+    #TODO: Yizho a spus că cumva trebuie luat că unele Anlagen nu rezistă mai mult de vreo 10 ani, și atunci trebuie înlocuite, cu costuri din nou. Ești sigur că tu ai implementat asta? 
+
+    ''' # My code
+    
+    
+    
     crf = param["CRF"] # See: load_params.py/calc_annual_investment
 
     b = { 
@@ -521,13 +587,13 @@ def run_optim(devs, param, dem, result_dict):
         "gas": 1.0, 
     }
 
-    for device in devs.keys():
+    for device in all_devs:
         
         # ------- Total Investemnt costs ------- 
 
         res_value = devs[device]["res_value"]
 
-        model.addConstr(inv[device] == crf * (1 - res_value) * tax * cap[device])
+        model.addConstr(inv[device] == crf * (1 - res_value) * cap[device])
 
         # ------ Annual investment costs -------
 
@@ -562,26 +628,25 @@ def run_optim(devs, param, dem, result_dict):
         # ------- Total annual costs -------
 
         model.addConstr(c_total[device] == c_inv[device] + c_om[device] + c_dem[device])
+    '''
 
     
     #%% OBJECTIVE FUNCTIONS
-    
     # Total annualized costs
-
+    
     model.addConstr(obj["tac"] == sum(c_total[dev] for dev in all_devs) # annualized investments
                                 + supply_costs_gas + cap_costs_gas # gas costs
                                 + supply_costs_el + cap_costs_el # electricity costs
-                                - rev_feed_in_el - rev_feed_in_gas # revenues
+                                - rev_feed_in_el - rev_feed_in_gas # revenues                                
                                 + supply_costs_biom # biomass
                                 + supply_costs_waste # waste
                                 + supply_costs_hydrogen
                                 + (from_gas_grid_total * param["co2_gas"] + biom_import_total * param["co2_biom"] + waste_import_total * param["co2_waste"]) * param["co2_tax"]) # CO2 tax
 
-
-    # Annual CO2 emissions: Implicit emissions by power supply from national grid is penalized, feed-in is ignored
     
-    model.addConstr(obj["co2"] == from_el_grid_total * param["co2_el_grid"]
-                                      + from_gas_grid_total * param["co2_gas"]
+    # Annual CO2 emissions: Implicit emissions by power supply from national grid is penalized, feed-in is ignored
+    model.addConstr(obj["co2"] == from_el_grid_total * param["co2_el_grid"]       
+                                      + from_gas_grid_total * param["co2_gas"] 
                                       + biom_import_total * param["co2_biom"]
                                       + waste_import_total * param["co2_waste"]
                                       + hydrogen_import_total * param["co2_hydrogen"]
@@ -604,8 +669,7 @@ def run_optim(devs, param, dem, result_dict):
     print("Optimization done. (%f seconds.)" % (time.time() - start_time))
 
 
-    #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    # Check and save results
+    #%% Check and save results
 
     # Check if optimal solution was found
     if model.Status in (3, 4) or model.SolCount == 0:  # "INFEASIBLE" or "INF_OR_UNBD"
@@ -631,23 +695,25 @@ def run_optim(devs, param, dem, result_dict):
 
         used_devices = [dev for dev in all_devs if cap[dev].X > 0.1]
 
-        result_dict = {
+        
+        result_dict.update({
             "devices": {},
             "total_costs": {},
             "co2_emissions": {},
-            "grid_flows": {},
-        }
+            "grid_flows": {}
+        })
+
 
         for k in used_devices:
-            result_dict["devices"][k] = {"cap": round(cap[k].X, 1)}
+            result_dict["devices"][k] = {"cap": round(cap[k].X, 2)}
 
         # Total investment costs in EUR
 
         result_dict["total_costs"] = {
             "Description": "Total investment costs in EUR",
 
-            "total_annualized_costs": int(obj["tac"].X), # "total_annualized_costs": int(obj["tac"].X),
-            "total_inv_cost": int(sum(inv[k].X for k in cap.keys())),
+            "total_annualized_costs_objective": int(obj["tac"].X), #
+            "total_annual_costs": int(sum(c_total[k].X for k in cap.keys())),
             "total_ann_inv_cost": int(sum(c_inv[k].X for k in cap.keys())),
             "total_om_cost": int(sum(c_om[k].X for k in cap.keys()))
 
@@ -787,6 +853,7 @@ def run_optim(devs, param, dem, result_dict):
         # Calculate generation in kWh
         eps = 0.01
         for k in used_devices:
+            print(k)
             # Initialize the 'generated' key for the current device
             result_dict["devices"][k]["generated"] = 0
 
@@ -807,22 +874,13 @@ def run_optim(devs, param, dem, result_dict):
 
         # result_dict["SAB"]["generated"] = sum(sum(gas[k][d][t].X for t in time_steps) * param["day_weights"][d] for d in days)  
 
-
-        ''' # Select technologies that are installed (to list only these in results)
-        for k in all_devs:
-            if cap[k].X > eps:
-                result_dict[k]["inst"] = True
-            else:
-                result_dict[k]["inst"] = False
-                
-        result_dict["PV_or_STC_inst"] = (result_dict["PV"]["inst"] or result_dict["STC"]["inst"])
-        result_dict["right_gen_tech_inst"] =(result_dict["WT"]["inst"] or result_dict["WAT"]["inst"] or result_dict["ELYZ"]["inst"] or result_dict["FC"]["inst"] or result_dict["SAB"]["inst"])
-        result_dict["storage_inst"] = (result_dict["TES"]["inst"] or result_dict["CTES"]["inst"] or result_dict["GS"]["inst"] or result_dict["BAT"]["inst"] or result_dict["H2S"]["inst"])
-
         # Area of PV and STC
-        result_dict["PV"]["area"] = int(area["PV"].X)
-        result_dict["STC"]["area"] = int(area["STC"].X)
-        '''
+        
+        if "PV" in used_devices:
+            result_dict["devices"]["PV"]["area"] = int(area["PV"].X)
+        if "STC" in used_devices:
+            result_dict["devices"]["STC"]["area"] = int(area["STC"].X)
+        
 
         # Calculate charge cycles of storages
         for k in used_devices:
@@ -836,6 +894,11 @@ def run_optim(devs, param, dem, result_dict):
             if k in ["TES", "CTES"]:
                 result_dict["devices"][k]["volume"] = round(cap[k].X / (param["c_w"] * param["rho_w"] * devs[k]["delta_T"]) * 3600, 1)
         
+
+        # Print cost of all devices
+
+        for k in used_devices:
+            result_dict["devices"][k]["cost"] = int(c_total[k].X)
 
         # Calculate share of renewables
 
