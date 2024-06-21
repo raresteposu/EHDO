@@ -2,7 +2,8 @@
     "PV": {
         "eta": 0.18,
         "inv_var": 1314,
-        "cost_om": 0.02
+        "cost_om": 0.02,
+        "life_time": 6
     },
     "STC": {
         "eta": 0.45,

@@ -1,19 +1,3 @@
-# -*- coding: utf-8 -*-
-
-"""
-
-EHDO - ENERGY HUB DESIGN OPTIMIZATION Tool
-
-Developed by:   E.ON Energy Research Center,
-                Institute for Energy Efficient Buildings and Indoor Climate,
-                RWTH Aachen University,
-                Germany
-
-Contact:        Marco Wirtz
-                marco.wirtz@eonerc.rwth-aachen.de
-
-"""
-
 import copy
 import json
 import numpy as np
@@ -36,7 +20,7 @@ def update_dict_recursively(dict1, dict2):
             dict1[key] = value
     return dict1
 
-def load_params(building, size, year, devices_to_use):
+def load_params(building, size, year, devices_to_use,obs_time):
 
     result_dict = {}
     param = {}  # general parameters
@@ -117,6 +101,12 @@ def load_params(building, size, year, devices_to_use):
                                      )
     # print("Design day clustering finished. (" + str(time.time()-start) + ")\n")
 
+    # Observation time
+
+    param["observation_time"] = obs_time
+
+    # Save clustered time series
+
     dem = {}
     dem["heat"] = clustered_series[0]
     dem["cool"] = clustered_series[1]
@@ -156,6 +146,30 @@ def load_params(building, size, year, devices_to_use):
     #    param[k] = series_clustered
 
     ################################################################
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     #%%  LOAD TECHNICAL PARAMETERS
 
     devs = {}
@@ -235,7 +249,6 @@ def load_params(building, size, year, devices_to_use):
         data_param = json.load(file)
 
     param = update_dict_recursively(param, data_param)
-
 
     ################################################################
     #%%  INITIALIZE CALCULATION
