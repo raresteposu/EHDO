@@ -269,65 +269,6 @@ def load_params(building, size, year, devices_to_use,obs_time):
 import optim_model as optim_model
 
 
-def calc_annual_investment(devs, param):
-    """
-    Calculation of total investment costs including replacements (based on VDI 2067, page 1).
-
-    Parameters
-    ----------
-    dev : dictionary
-        technology parameter
-    param : dictionary
-        economic parameters
-
-    Returns
-    -------
-    annualized fix and variable investment
-    """
-
-    observation_time = param["observation_time"]
-    interest_rate = param["interest_rate"]
-    q = 1 + interest_rate
-
-    # Capital recovery factor (CRF)
-    CRF = ((q**observation_time) * interest_rate) / ((q**observation_time) - 1)
-
-    param["CRF"] = CRF
-    
-    for device in devs.keys():
-
-        try:
-            life_time = devs[device]["life_time"]
-        except IndexError:
-            raise ValueError(f"Life time for device {device} is not defined.")
- 
-
-        n = int(observation_time / life_time)
-        
-        # print("")
-        # print("Device: ", device)
-        
-        r = 0.1
-
-        rval = sum((interest_rate/q)**(i * life_time) for i in range(0, n+1)) - ((r**(n * life_time) * ((n+1) * life_time - observation_time)) / (life_time * q**observation_time)) # Simualtionsfahrplan.docx | T_clc = observation_time
-
-        # print("Rval: ", rval)
-
-        invest_replacements = sum((q ** (-i * life_time)) for i in range(1, n+1))
-
-        # print("Investment replacements: ", invest_replacements)
-        # print("")
-        
-
-        if life_time > observation_time:
-            devs[device]["ann_factor"] = (1 - rval) * CRF
-        else:
-            devs[device]["ann_factor"] = ( 1 + invest_replacements - rval) * CRF
-
-        devs[device]["res_value"] = rval
-
-    return devs, param
-
 def calc_monthly_dem(dem_uncl, param_uncl, result_dict):
 
     month_tuple = ("Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec")

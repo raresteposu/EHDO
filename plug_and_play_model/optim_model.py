@@ -228,12 +228,13 @@ def run_optim(devs, param, dem, result_dict):
     model.setObjectiveN(obj["tac"], index=0, priority=1)
 
     # If the observation time is less than 16, set a secondary objective to minimize CO2 emissions
-    if param["observation_time"] < 16:
-        model.setObjectiveN(obj["co2"], index=1, priority=2)
-    else:
-        # Ensure CO2 emissions are below or equal to 0 if observation time is 16 or more
-        model.addConstr(obj["co2"] <= 1e-6)
+    # if param["observation_time"] < 16:
+    #     model.setObjectiveN(obj["co2"], index=1, priority=2)
+    # else:
+    #     # Ensure CO2 emissions are below or equal to 0 if observation time is 16 or more
+    #     model.addConstr(obj["co2"] <= 1e-6)
 
+    model.addConstr(obj["co2"] <= 1e-6)
     # Optimize the model
     model.optimize()
 
@@ -261,7 +262,7 @@ def run_optim(devs, param, dem, result_dict):
             for device in ["STC", "EB", "HP", "BOI", "GHP", "BBOI", "WBOI"]:
                 model.addConstr(heat[device][d][t] <= cap[device])
 
-            for device in ["CHP", "BCHP", "WCHP"]: #TODO: Added by me, may need to be removed
+            for device in ["CHP", "BCHP", "WCHP"]:
                 model.addConstr(heat[device][d][t] <= cap[device])
 
             for device in ["PV", "WT", "WAT", "CHP", "BCHP", "WCHP", "ELYZ", "FC"]:
@@ -410,7 +411,7 @@ def run_optim(devs, param, dem, result_dict):
     # Power
 
     if param["peak_dem_met_conv"] == False:
-        model.addConstr(cap["CHP"] + cap["BCHP"] + cap["WCHP"] + cap["FC"] + grid_limit_el >= param["peak_power"]) #TODO: Why not /devs["CHP"]["eta_th"]?
+        model.addConstr(cap["CHP"] + cap["BCHP"] + cap["WCHP"] + cap["FC"] + grid_limit_el >= param["peak_power"]) 
     else:
         model.addConstr(cap["PV"] + cap["WT"] + cap["WAT"] + cap["CHP"] + cap["BCHP"] + cap["WCHP"] + cap["FC"] + grid_limit_el >= param["peak_power"])
     
@@ -463,6 +464,7 @@ def run_optim(devs, param, dem, result_dict):
     model.addConstr(supply_costs_el  == from_el_grid_total  * param["price_supply_el"])
     model.addConstr(cap_costs_el     == grid_limit_el       * param["price_cap_el"])
     model.addConstr(rev_feed_in_el   == to_el_grid_total    * param["revenue_feed_in_el"])
+    model.addConstr(rev_feed_in_el   <= param["revenue_feed_in_el"] * param["feed_in_el_limit"])
 
     # Costs/revenues for natural gas
     model.addConstr(supply_costs_gas == from_gas_grid_total * param["price_supply_gas"])
@@ -545,6 +547,7 @@ def run_optim(devs, param, dem, result_dict):
 
         q = 1 + rate
         crf = (q ** t_clc * rate) / (q ** t_clc - 1)  # Capital recovery factor
+        print(crf)
 
         b_years = [2024, 2025, 2030, 2035, 2040]
         gas_prices = [130, 106, 104, 103, 116]
@@ -570,7 +573,14 @@ def run_optim(devs, param, dem, result_dict):
             n = int(t_clc / life_time) # Number of replacements
             r = 0.1 
 
-            rval[device] = sum((rate/q)**(i * life_time) for i in range(0, n+1)) - ((r**(n * life_time) * ((n+1) * life_time - t_clc)) / (life_time * q**t_clc))
+            if t_clc < 16:
+                rval[device] = sum((rate/q)**(i * life_time) for i in range(0, n+1)) - ((r**(n * life_time) * ((n+1) * life_time - t_clc)) / (life_time * q**t_clc))
+                print(rval[device])
+            else:
+                rval[device] = ((n+1) * life_time - t_clc) / life_time * (q ** (-t_clc))
+
+
+            # rval[device] = ((n+1) * life_time - observation_time) / life_time * (q ** (-observation_time))
 
         # Total investment costs
 
@@ -689,6 +699,7 @@ def run_optim(devs, param, dem, result_dict):
 
     # Execute calculation
     start_time = time.time()
+    model.setParam('OutputFlag', 0)
     model.optimize()
     print("Optimization done. (%f seconds.)" % (time.time() - start_time))
 
@@ -893,7 +904,6 @@ def run_optim(devs, param, dem, result_dict):
                 result_dict["devices"][k]["generated"] = int(sum(sum(cool[k][d][t].X for t in time_steps) * param["day_weights"][d] for d in days))
             elif k in ["PV", "WT", "WAT", "CHP", "BCHP", "WCHP", "ELYZ", "FC"]:
                 result_dict["devices"][k]["generated"] = int(sum(sum(power[k][d][t].X for t in time_steps) * param["day_weights"][d] for d in days))
-                # #TODO: CHP can generate heat and power, so we need to add the heat generation to the power generation
                 if k in ["CHP", "BCHP", "WCHP"]:
                   generated = {
                         "power": int(sum(sum(power[k][d][t].X for t in time_steps) * param["day_weights"][d] for d in days)),
