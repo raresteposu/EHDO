@@ -1,4 +1,5 @@
 {
+    "observation_time": 10,
     "enable_supply_el": true,
     "price_supply_el": 0.02,
     "price_cap_el": 0,

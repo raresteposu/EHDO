@@ -40,13 +40,12 @@ size = "dez"
 year = "ref"
 
 
-devices_to_use = ["HP","BOI", "CHP","BCHP", "AC", "PV", "STC", "EB", "BBOI", "BAT"] # Feasible devices
+devices_to_use = ["HP","BOI", "CHP","BCHP","AC", "PV", "STC", "EB", "BBOI", "BAT"] # Feasible devices
 
-obs_time = 10
+param, devs, dem, result_dict = load_params.load_params(building, size, year, devices_to_use)
 
-param, devs, dem, result_dict = load_params.load_params(building, size, year, devices_to_use, obs_time)
-
-devs["PV"]["life_time"] = 5 
+param["observation_time"] = 10
+devs ["PV"]["life_time"] = 5
 param["enable_feed_in_el"] = True
 param["revenue_feed_in_el"] = 0.01
 

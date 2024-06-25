@@ -225,7 +225,7 @@ def run_optim(devs, param, dem, result_dict):
     ))
 
     # Set the primary objective to minimize the total annualized costs
-    model.setObjectiveN(obj["tac"], index=0, priority=1)
+    model.setObjective(obj["tac"], gp.GRB.MINIMIZE)
 
     # If the observation time is less than 16, set a secondary objective to minimize CO2 emissions
     # if param["observation_time"] < 16:
@@ -573,14 +573,7 @@ def run_optim(devs, param, dem, result_dict):
             n = int(t_clc / life_time) # Number of replacements
             r = 0.1 
 
-            if t_clc < 16:
-                rval[device] = sum((rate/q)**(i * life_time) for i in range(0, n+1)) - ((r**(n * life_time) * ((n+1) * life_time - t_clc)) / (life_time * q**t_clc))
-                print(rval[device])
-            else:
-                rval[device] = ((n+1) * life_time - t_clc) / life_time * (q ** (-t_clc))
-
-
-            # rval[device] = ((n+1) * life_time - observation_time) / life_time * (q ** (-observation_time))
+            rval[device] = sum((rate/q)**(i * life_time) for i in range(0, n+1)) - ((r**(n * life_time) * ((n+1) * life_time - t_clc)) / (life_time * q**t_clc))
 
         # Total investment costs
 
@@ -589,7 +582,7 @@ def run_optim(devs, param, dem, result_dict):
         # Annual investment costs
         for device in all_devs:
             # INFO: BuildingOT - inv[device] e specific
-            model.addConstr(c_inv[device] == crf * (1 - rval[device]) * cap[device] * devs[device]["inv_var"])
+            model.addConstr(c_inv[device] == crf * rval[device] * cap[device] * devs[device]["inv_var"])
             
         # Operation and maintenance costs
         for device in all_devs:    
@@ -900,7 +893,7 @@ def run_optim(devs, param, dem, result_dict):
 
             if k in ["STC", "HP", "EB", "BOI", "GHP", "BBOI", "WBOI"]:
                 result_dict["devices"][k]["generated"] = int(sum(sum(heat[k][d][t].X for t in time_steps) * param["day_weights"][d] for d in days))
-            elif k in ["CC", "AC"]:
+            elif k in ["CC", "AC", ]:
                 result_dict["devices"][k]["generated"] = int(sum(sum(cool[k][d][t].X for t in time_steps) * param["day_weights"][d] for d in days))
             elif k in ["PV", "WT", "WAT", "CHP", "BCHP", "WCHP", "ELYZ", "FC"]:
                 result_dict["devices"][k]["generated"] = int(sum(sum(power[k][d][t].X for t in time_steps) * param["day_weights"][d] for d in days))

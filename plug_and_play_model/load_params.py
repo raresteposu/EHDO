@@ -20,7 +20,7 @@ def update_dict_recursively(dict1, dict2):
             dict1[key] = value
     return dict1
 
-def load_params(building, size, year, devices_to_use,obs_time):
+def load_params(building, size, year, devices_to_use):
 
     result_dict = {}
     param = {}  # general parameters
@@ -102,8 +102,6 @@ def load_params(building, size, year, devices_to_use,obs_time):
     # print("Design day clustering finished. (" + str(time.time()-start) + ")\n")
 
     # Observation time
-
-    param["observation_time"] = obs_time
 
     # Save clustered time series
 

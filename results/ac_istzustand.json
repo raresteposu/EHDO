@@ -1,1 +1,161 @@
-{}
+{
+    "demands": {
+        "sum": {
+            "heat": 63193,
+            "cool": 723,
+            "power": 18673,
+            "hydrogen": 0
+        },
+        "peak": {
+            "heat": 35,
+            "cool": 7,
+            "power": 24,
+            "hydrogen": 0
+        },
+        "monthly": {
+            "heat": {
+                "Jan": 10907,
+                "Feb": 9137,
+                "Mar": 8381,
+                "Apr": 5816,
+                "May": 629,
+                "Jun": 588,
+                "Jul": 563,
+                "Aug": 589,
+                "Sep": 561,
+                "Oct": 6574,
+                "Nov": 8727,
+                "Dec": 10714
+            },
+            "cool": {
+                "Jan": 0,
+                "Feb": 0,
+                "Mar": 0,
+                "Apr": 0,
+                "May": 14,
+                "Jun": 121,
+                "Jul": 313,
+                "Aug": 250,
+                "Sep": 24,
+                "Oct": 0,
+                "Nov": 0,
+                "Dec": 0
+            },
+            "power": {
+                "Jan": 1638,
+                "Feb": 1530,
+                "Mar": 1589,
+                "Apr": 1565,
+                "May": 1549,
+                "Jun": 1384,
+                "Jul": 1592,
+                "Aug": 1539,
+                "Sep": 1499,
+                "Oct": 1605,
+                "Nov": 1517,
+                "Dec": 1660
+            },
+            "hydrogen": {
+                "Jan": 0,
+                "Feb": 0,
+                "Mar": 0,
+                "Apr": 0,
+                "May": 0,
+                "Jun": 0,
+                "Jul": 0,
+                "Aug": 0,
+                "Sep": 0,
+                "Oct": 0,
+                "Nov": 0,
+                "Dec": 0
+            }
+        }
+    },
+    "devices": {
+        "PV": {
+            "cap": 69.41,
+            "curtailed": -12,
+            "generated": 65440,
+            "full_load_hours": 942,
+            "area": 385,
+            "cost": 11838,
+            "peak_generation": 58.09
+        },
+        "STC": {
+            "cap": 4.86,
+            "curtailed": 0,
+            "generated": 3008,
+            "full_load_hours": 618,
+            "area": 10,
+            "cost": 318,
+            "peak_generation": 3.3
+        },
+        "AC": {
+            "cap": 8.25,
+            "generated": 723,
+            "full_load_hours": 87,
+            "cost": 595,
+            "peak_generation": 13.75
+        },
+        "BOI": {
+            "cap": 19.63,
+            "generated": 61391,
+            "full_load_hours": 3127,
+            "cost": 544,
+            "peak_generation": 0
+        }
+    },
+    "total_costs": {
+        "Description": "Total investment costs in EUR",
+        "total_annualized_costs_objective": 17854,
+        "total_annual_costs": 14592,
+        "total_ann_inv_cost": 13451,
+        "total_om_cost": 1108
+    },
+    "co2_emissions": {
+        "Description": "Total CO2 emissions in kg/a",
+        "total_co2_emissions": 0,
+        "onsite": 12924,
+        "credit_feedin": 17347,
+        "generated due to electrity": 4422,
+        "won due to electricity feed in": 17347,
+        "generated due to gas": 12924,
+        "won due to gas feed in": 0,
+        "generated due to biom": 0,
+        "generated due to waste": 0,
+        "generated due to hydrogen": 0,
+        "tax_total": 2326319
+    },
+    "grid_flows": {
+        "Description": "Total grid flows in kWh/a",
+        "from_el_grid_total": 11056,
+        "to_el_grid_total": 57823,
+        "from_gas_grid_total": 64622,
+        "to_gas_grid_total": 0,
+        "biom_import_total": 0,
+        "waste_import_total": 0,
+        "hydrogen_import_total": 0,
+        "max_el_from_grid": 7,
+        "max_gas_from_grid": 20,
+        "max_el_to_grid": 56,
+        "max_gas_to_grid": 0,
+        "max_biom": 0,
+        "max_waste": 0,
+        "max_hydrogen": 0
+    },
+    "supply_costs": {
+        "Description": "Total supply costs in EUR",
+        "supply_costs_el": 221,
+        "cap_costs_el": 0,
+        "total_el_costs": 221,
+        "rev_feed_in_el": 578,
+        "supply_costs_gas": 1292,
+        "cap_costs_gas": 0,
+        "total_gas_costs": 1292,
+        "rev_feed_in_gas": 0,
+        "supply_costs_biom": 0,
+        "supply_costs_waste": 0,
+        "supply_costs_hydrogen": 0
+    },
+    "percent_of_renewable_sources": 47.5
+}
