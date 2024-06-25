@@ -76,7 +76,7 @@
         "cost_om": 0.03,
         "min_cap": 0,
         "max_cap": 1000000,
-        "COP": null
+        "COP": 4
     },
     "EB": {
         "feasible": false,

@@ -547,7 +547,6 @@ def run_optim(devs, param, dem, result_dict):
 
         q = 1 + rate
         crf = (q ** t_clc * rate) / (q ** t_clc - 1)  # Capital recovery factor
-        print(crf)
 
         b_years = [2024, 2025, 2030, 2035, 2040]
         gas_prices = [130, 106, 104, 103, 116]
@@ -625,9 +624,6 @@ def run_optim(devs, param, dem, result_dict):
                             pass
                 
                 model.addConstr(c_dem[device] == crf * b["el"] * el_price * dt * summation)
-
-                model.addConstr(c_dem[device] == crf * b["el"] * el_price * dt * 
-                                 sum(weight_days[d] * sum(power[device][d][t] for t in time_steps) for d in range(len(days))))
                 
 
         # Total annual costs
@@ -1052,15 +1048,7 @@ def run_optim(devs, param, dem, result_dict):
 
         if "HP" in used_devices:
             full["amb_heat_HP"] = full["heat_HP"] - full["power_HP"]
-
-            total_heat_HP = np.sum(full["heat_HP"])
-            total_power_HP = np.sum(full["power_HP"])
-
-            if total_power_HP == 0:
-                # Handle the case where total_power_HP is zero to avoid division by zero
-                result_dict["devices"]["HP"]["mean_COP"] = np.nan  # or use a default value, e.g., 0 or float('inf')
-            else:
-                result_dict["devices"]["HP"]["mean_COP"] = round(total_heat_HP / total_power_HP, 2)
+            result_dict["mean_COP_HP"] = round(np.sum(full["heat_HP"]) / np.sum(full["power_HP"]),2)
 
 
         # Remove all devices with generated = 0

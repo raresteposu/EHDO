@@ -1,0 +1,25 @@
+Comparison
+=================
+
+Demand Differences:
+  The 'heat' demand in Sanierungszustand is with 23692 smaller then in the Istzustand
+  The 'cool' demand in Sanierungszustand is with 353 bigger then in the Istzustand
+  The 'power' demand is the same in both Zustands
+  The 'hydrogen' demand is the same in both Zustands
+
+Cost Differences:
+  Total annual costs are with 1531 smaller in Sanierungzustand
+
+Device Differences:
+  HP:
+   The cap is with 3.08 smaller in Sanierungzustand
+   The cost is with 378 smaller in Sanierungzustand
+
+  PV:
+   The cap is with 7.0 smaller in Sanierungzustand
+   The cost is with 1190 smaller in Sanierungzustand
+
+  AC:
+   The cap is with 0.56 bigger in Sanierungzustand
+   The cost is with 38 bigger in Sanierungzustand
+
