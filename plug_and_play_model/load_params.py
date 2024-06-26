@@ -20,7 +20,7 @@ def update_dict_recursively(dict1, dict2):
             dict1[key] = value
     return dict1
 
-def load_params(building, size, year, devices_to_use):
+def load_params(building, size, devices_to_use):
 
     result_dict = {}
     param = {}  # general parameters
@@ -243,7 +243,7 @@ def load_params(building, size, year, devices_to_use):
     #%%  LOAD MODEL PARAMETERS
 
 
-    param_path = ".\\plug_and_play_model\\input_data\\param_"+year+".json"
+    param_path = ".\\plug_and_play_model\\input_data\\param.json"
     with open(param_path, 'r') as file:
         data_param = json.load(file)
 

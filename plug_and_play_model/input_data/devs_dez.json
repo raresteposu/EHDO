@@ -22,7 +22,6 @@
     },
     "HP": {
         "inv_var": 1358,
-        "life_time": 20,
         "cost_om": 0.03
     },
     "EB": {

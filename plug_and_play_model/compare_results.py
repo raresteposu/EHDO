@@ -24,7 +24,8 @@ def compare_devices(devices1, devices2):
         device_diff[device] = {}
         if device in devices1 and device in devices2:
             for key in devices1[device]:
-                device_diff[device][key] = devices2[device].get(key, 0) - devices1[device].get(key, 0)
+                if key in ["cap", 'cost']:
+                    device_diff[device][key] = devices2[device].get(key, 0) - devices1[device].get(key, 0)
         elif device in devices1:
             device_diff[device] = {"removed": devices1[device]}
         else:

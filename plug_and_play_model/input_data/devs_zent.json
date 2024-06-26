@@ -6,7 +6,7 @@
     },
     "STC": {
         "eta": 0.45,
-        "inv_var": 650,
+        "inv_var": 658,
         "cost_om": 0.02
     },
     "CHP": {

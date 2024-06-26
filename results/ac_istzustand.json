@@ -73,43 +73,73 @@
     },
     "devices": {
         "PV": {
-            "cap": 43.92,
-            "curtailed": -8,
-            "generated": 41409,
+            "cap": 102.08,
+            "curtailed": -19,
+            "generated": 96248,
             "full_load_hours": 942,
-            "area": 243,
-            "cost": 7501,
-            "peak_generation": 36.76
+            "area": 567,
+            "cost": 12067,
+            "peak_generation": 85.43
+        },
+        "STC": {
+            "cap": 615.45,
+            "curtailed": 367,
+            "generated": 86074,
+            "full_load_hours": 139,
+            "area": 1367,
+            "cost": 38460,
+            "peak_generation": 120.16
         },
         "HP": {
-            "cap": 35.69,
-            "generated": 64400,
-            "full_load_hours": 1804,
-            "cost": 4401,
-            "peak_generation": 19.63
+            "cap": 9.47,
+            "generated": {
+                "heat": 813,
+                "cool": 723
+            },
+            "full_load_hours": 162,
+            "cost": 1197,
+            "mean_COP": 9.12,
+            "peak_generation": 1.22
         },
-        "AC": {
-            "cap": 8.25,
-            "generated": 723,
-            "full_load_hours": 87,
-            "cost": 595,
-            "peak_generation": 13.75
+        "EB": {
+            "cap": 26.23,
+            "generated": 2828,
+            "full_load_hours": 107,
+            "cost": 446,
+            "peak_generation": 13.03
+        },
+        "TES": {
+            "cap": 1061.73,
+            "generated": 0,
+            "full_load_hours": 0,
+            "charge_cycles": 53,
+            "volume": 22.9,
+            "cost": 1025,
+            "peak_generation": 0
+        },
+        "BAT": {
+            "cap": 38.61,
+            "generated": 0,
+            "full_load_hours": 0,
+            "charge_cycles": 695,
+            "cost": 3128,
+            "peak_generation": 0
         }
     },
     "total_costs": {
         "Description": "Total investment costs in EUR",
-        "total_annualized_costs_objective": 13651,
-        "total_annual_costs": 13495,
-        "total_ann_inv_cost": 12379,
+        "total_annualized_costs_objective": 56590,
+        "total_annual_costs": 57336,
+        "total_ann_inv_cost": 56225,
         "total_om_cost": 1108
     },
     "co2_emissions": {
         "Description": "Total CO2 emissions in kg/a",
         "total_co2_emissions": 0,
         "onsite": 0,
-        "credit_feedin": 9352,
-        "generated due to electrity": 9352,
-        "won due to electricity feed in": 9352,
+        "credit_feedin": 0,
+        "generated due to electrity": 0,
+        "won due to electricity feed in": 0,
         "generated due to gas": 0,
         "won due to gas feed in": 0,
         "generated due to biom": 0,
@@ -119,16 +149,16 @@
     },
     "grid_flows": {
         "Description": "Total grid flows in kWh/a",
-        "from_el_grid_total": 23380,
-        "to_el_grid_total": 31174,
+        "from_el_grid_total": 0,
+        "to_el_grid_total": 74599,
         "from_gas_grid_total": 0,
         "to_gas_grid_total": 0,
         "biom_import_total": 0,
         "waste_import_total": 0,
         "hydrogen_import_total": 0,
-        "max_el_from_grid": 9,
+        "max_el_from_grid": 0,
         "max_gas_from_grid": 0,
-        "max_el_to_grid": 35,
+        "max_el_to_grid": 71,
         "max_gas_to_grid": 0,
         "max_biom": 0,
         "max_waste": 0,
@@ -136,10 +166,10 @@
     },
     "supply_costs": {
         "Description": "Total supply costs in EUR",
-        "supply_costs_el": 467,
+        "supply_costs_el": 0,
         "cap_costs_el": 0,
-        "total_el_costs": 467,
-        "rev_feed_in_el": 311,
+        "total_el_costs": 0,
+        "rev_feed_in_el": 745,
         "supply_costs_gas": 0,
         "cap_costs_gas": 0,
         "total_gas_costs": 0,
@@ -148,6 +178,5 @@
         "supply_costs_waste": 0,
         "supply_costs_hydrogen": 0
     },
-    "percent_of_renewable_sources": 63.9,
-    "mean_COP_HP": 4.31
+    "percent_of_renewable_sources": 100.0
 }

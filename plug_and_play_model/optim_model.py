@@ -94,7 +94,7 @@ def run_optim(devs, param, dem, result_dict):
     
     # Cooling power to/from devices
     cool = {}
-    for device in ["CC", "AC"]:
+    for device in ["CC", "AC", "HP"]:
         cool[device] = {}
         for d in days:
             cool[device][d] = {}
@@ -268,7 +268,7 @@ def run_optim(devs, param, dem, result_dict):
             for device in ["PV", "WT", "WAT", "CHP", "BCHP", "WCHP", "ELYZ", "FC"]:
                 model.addConstr(power[device][d][t] <= cap[device])
 
-            for device in ["CC", "AC"]:
+            for device in ["CC", "AC", "HP"]:
                 model.addConstr(cool[device][d][t] <= cap[device])
                 
             for device in ["SAB"]:
@@ -317,6 +317,7 @@ def run_optim(devs, param, dem, result_dict):
         
             # Electric heat pump
             model.addConstr(heat["HP"][d][t] == power["HP"][d][t] * devs["HP"]["COP"][d][t])
+            model.addConstr(cool["HP"][d][t] == power["HP"][d][t] * (devs["HP"]["COP"][d][t]-1))
             
             # Electric boiler
             model.addConstr(heat["EB"][d][t] == power["EB"][d][t] * devs["EB"]["eta_th"])
@@ -377,7 +378,7 @@ def run_optim(devs, param, dem, result_dict):
             model.addConstr(power["PV"][d][t] + power["WT"][d][t] + power["WAT"][d][t] + power["CHP"][d][t] + power["BCHP"][d][t] + power["WCHP"][d][t] + power["FC"][d][t] + power["from_grid"][d][t] == dem["power"][d][t] + power["HP"][d][t] + power["EB"][d][t] + power["CC"][d][t] + power["ELYZ"][d][t] + ch["BAT"][d][t] + power["to_grid"][d][t])
     
             # Cooling balance
-            model.addConstr(cool["AC"][d][t] + cool["CC"][d][t] == dem["cool"][d][t] + ch["CTES"][d][t])  
+            model.addConstr(cool["AC"][d][t] + cool["CC"][d][t] + cool["HP"][d][t] == dem["cool"][d][t] + ch["CTES"][d][t])  
             
             # Gas balance
             model.addConstr(gas["from_grid"][d][t] + gas["SAB"][d][t] == gas["CHP"][d][t] + gas["BOI"][d][t] + gas["GHP"][d][t] + ch["GS"][d][t] + gas["to_grid"][d][t])
@@ -406,14 +407,10 @@ def run_optim(devs, param, dem, result_dict):
                     >= param["peak_heat"])
                     
     # Cooling
-    model.addConstr(cap["CC"] + cap["AC"] >= param["peak_cool"])
+    model.addConstr(cap["CC"] + cap["AC"] + cap["HP"] >= param["peak_cool"])
     
     # Power
-
-    if param["peak_dem_met_conv"] == False:
-        model.addConstr(cap["CHP"] + cap["BCHP"] + cap["WCHP"] + cap["FC"] + grid_limit_el >= param["peak_power"]) 
-    else:
-        model.addConstr(cap["PV"] + cap["WT"] + cap["WAT"] + cap["CHP"] + cap["BCHP"] + cap["WCHP"] + cap["FC"] + grid_limit_el >= param["peak_power"])
+    model.addConstr(cap["PV"] + cap["WT"] + cap["WAT"] + cap["CHP"] + cap["BCHP"] + cap["WCHP"] + cap["FC"] + grid_limit_el >= param["peak_power"])
     
     # Hydrogen
     if (param["enable_supply_hydrogen"] == False) and devs["ELYZ"]["feasible"]:
@@ -480,7 +477,7 @@ def run_optim(devs, param, dem, result_dict):
     ### Supply limitations ###
 
     # Forbid/allow feed-in (user input)
-    if param["enable_feed_in_el"] != True:
+    if param["enable_feed_in_el"] == False:
         model.addConstr(to_el_grid_total == 0)
         # Ensure alternative pathways for energy balance
         for d in days:
@@ -491,7 +488,7 @@ def run_optim(devs, param, dem, result_dict):
                     dem["power"][d][t] + power["HP"][d][t] + power["EB"][d][t] + 
                     power["CC"][d][t] + power["ELYZ"][d][t] + ch["BAT"][d][t]
                 )
-    if param["enable_feed_in_gas"] != True:
+    if param["enable_feed_in_gas"] == False:
         model.addConstr(to_gas_grid_total == 0)
         # Ensure alternative pathways for gas balance
         for d in days:
@@ -510,7 +507,7 @@ def run_optim(devs, param, dem, result_dict):
         model.addConstr(from_el_grid_total <= param["supply_limit_el"])
 
     # Limitation of gas supply (user input)
-    if param["enable_supply_gas"] != True:
+    if param["enable_supply_gas"] == False:
         model.addConstr(from_gas_grid_total == 0)
     if param["enable_cap_limit_gas"] == True:
         model.addConstr(grid_limit_gas <= param["cap_limit_gas"])
@@ -889,7 +886,13 @@ def run_optim(devs, param, dem, result_dict):
 
             if k in ["STC", "HP", "EB", "BOI", "GHP", "BBOI", "WBOI"]:
                 result_dict["devices"][k]["generated"] = int(sum(sum(heat[k][d][t].X for t in time_steps) * param["day_weights"][d] for d in days))
-            elif k in ["CC", "AC", ]:
+                if k == "HP":
+                    generated = {   
+                        "heat": int(sum(sum(heat[k][d][t].X for t in time_steps) * param["day_weights"][d] for d in days)),
+                        "cool": int(sum(sum(cool[k][d][t].X for t in time_steps) * param["day_weights"][d] for d in days))
+                    } 
+                    result_dict["devices"][k]["generated"] = generated
+            elif k in ["CC", "AC"]: 
                 result_dict["devices"][k]["generated"] = int(sum(sum(cool[k][d][t].X for t in time_steps) * param["day_weights"][d] for d in days))
             elif k in ["PV", "WT", "WAT", "CHP", "BCHP", "WCHP", "ELYZ", "FC"]:
                 result_dict["devices"][k]["generated"] = int(sum(sum(power[k][d][t].X for t in time_steps) * param["day_weights"][d] for d in days))
@@ -905,6 +908,9 @@ def run_optim(devs, param, dem, result_dict):
 
                 if k in ["CHP", "BCHP", "WCHP"]:
                     total_generated = result_dict["devices"][k]["generated"]["power"] + result_dict["devices"][k]["generated"]["heat"]
+                    result_dict["devices"][k]["full_load_hours"] = int(total_generated / cap[k].X)
+                if k == "HP":
+                    total_generated = result_dict["devices"][k]["generated"]["heat"] + result_dict["devices"][k]["generated"]["cool"]
                     result_dict["devices"][k]["full_load_hours"] = int(total_generated / cap[k].X)
                 else:
                     result_dict["devices"][k]["full_load_hours"] = int(result_dict["devices"][k]["generated"] / cap[k].X)
@@ -963,9 +969,9 @@ def run_optim(devs, param, dem, result_dict):
                         "power_WAT", "power_WAT_curtail",
                         "heat_STC", "heat_STC_curtail",
 
-                        "heat_HP", "power_HP",
+                        "heat_HP", "cool_HP", "power_HP",
                         "heat_EB", "power_EB",
-                        "cool_CC", "power_CC",
+                        "cool_CC", "power_CC", 
                         "cool_AC", "heat_AC",
 
                         "power_CHP", "heat_CHP", "gas_CHP",
@@ -1048,7 +1054,7 @@ def run_optim(devs, param, dem, result_dict):
 
         if "HP" in used_devices:
             full["amb_heat_HP"] = full["heat_HP"] - full["power_HP"]
-            result_dict["mean_COP_HP"] = round(np.sum(full["heat_HP"]) / np.sum(full["power_HP"]),2)
+            result_dict["devices"]["HP"]["mean_COP"] = round(np.sum(full["heat_HP"]) / np.sum(full["power_HP"]),2)
 
 
         # Remove all devices with generated = 0
@@ -1068,23 +1074,26 @@ def run_optim(devs, param, dem, result_dict):
             result_dict["devices"].pop(k, None)
                 
 
-        # Calculate the size of every device
+        # Calculate the peak_generation of every device
 
-        # Size is the peak generation in kW, not in kWh
+        # peak_generation is the peak generation in kW, not in kWh
 
         for k in used_devices:
 
             if k in ["CHP", "BCHP", "WCHP"]:
-                size = max(heat[k][d][t].X + power[k][d][t].X for d in days for t in time_steps)
-                result_dict["devices"][k]["peak_generation"] = round(size, 2)
+                peak_generation = max(heat[k][d][t].X + power[k][d][t].X for d in days for t in time_steps)
+                result_dict["devices"][k]["peak_generation"] = round(peak_generation, 2)
+            if k in ["HP"]:
+                peak_generation = max( max(heat[k][d][t].X, cool[k][d][t].X) for d in days for t in time_steps)
+                result_dict["devices"][k]["peak_generation"] = round(peak_generation, 2)
             if "generated" in result_dict["devices"][k]:
                 try:
-                    if k in ["HP", "EB", "CC", "ELYZ", "FC", "STC", "AC", "CC"]:
-                        size = max(heat[k][d][t].X for d in days for t in time_steps)
-                        result_dict["devices"][k]["peak_generation"] = round(size, 2)
+                    if k in ["EB", "CC", "ELYZ", "FC", "STC", "AC"]:
+                        peak_generation = max(heat[k][d][t].X for d in days for t in time_steps)
+                        result_dict["devices"][k]["peak_generation"] = round(peak_generation, 2)
                     else:
-                        size = max(power[k][d][t].X for d in days for t in time_steps)
-                        result_dict["devices"][k]["peak_generation"] = round(size, 2)
+                        peak_generation = max(power[k][d][t].X for d in days for t in time_steps)
+                        result_dict["devices"][k]["peak_generation"] = round(peak_generation, 2)
                 except KeyError:
                     result_dict["devices"][k]["peak_generation"] = 0
 
@@ -1116,4 +1125,3 @@ def run_optim(devs, param, dem, result_dict):
 
         return result_dict
 
-# %%
