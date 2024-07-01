@@ -72,24 +72,6 @@
         }
     },
     "devices": {
-        "PV": {
-            "cap": 102.16,
-            "curtailed": -19,
-            "generated": 96321,
-            "full_load_hours": 942,
-            "area": 567,
-            "cost": 12076,
-            "peak_generation": 84.63
-        },
-        "STC": {
-            "cap": 419.32,
-            "curtailed": 253,
-            "generated": 57973,
-            "full_load_hours": 138,
-            "area": 931,
-            "cost": 26208,
-            "peak_generation": 90.04
-        },
         "HP": {
             "cap": 8.81,
             "generated": {
@@ -97,86 +79,78 @@
                 "cool": 1076
             },
             "full_load_hours": 259,
-            "cost": 1118,
+            "cost": 1481,
             "mean_COP": 8.81,
             "peak_generation": 0.77
         },
         "EB": {
             "cap": 23.8,
-            "generated": 2888,
-            "full_load_hours": 121,
-            "cost": 405,
-            "peak_generation": 12.91
+            "generated": 39501,
+            "full_load_hours": 1659,
+            "cost": 464,
+            "peak_generation": 12.77
         },
         "TES": {
-            "cap": 860.02,
+            "cap": 166.94,
             "generated": 0,
             "full_load_hours": 0,
-            "charge_cycles": 45,
-            "volume": 18.5,
-            "cost": 831,
-            "peak_generation": 0
-        },
-        "BAT": {
-            "cap": 38.24,
-            "generated": 0,
-            "full_load_hours": 0,
-            "charge_cycles": 765,
-            "cost": 3098,
+            "charge_cycles": 3,
+            "volume": 3.6,
+            "cost": 186,
             "peak_generation": 0
         }
     },
     "total_costs": {
         "Description": "Total investment costs in EUR",
-        "total_annualized_costs_objective": 44003,
-        "total_annual_costs": 44748,
-        "total_ann_inv_cost": 43637,
-        "total_om_cost": 1108
+        "total_annualized_costs_objective": 4047,
+        "total_annual_costs": 2133,
+        "total_ann_inv_cost": 1711,
+        "total_om_cost": 421
     },
     "co2_emissions": {
         "Description": "Total CO2 emissions in kg/a",
         "total_co2_emissions": 0,
-        "onsite": 0,
-        "credit_feedin": 0,
-        "generated due to electrity": 0,
+        "onsite": 54,
+        "credit_feedin": 113,
+        "generated due to electrity": 59,
         "won due to electricity feed in": 0,
-        "generated due to gas": 0,
-        "won due to gas feed in": 0,
+        "generated due to gas": 54,
+        "won due to gas feed in": 113,
         "generated due to biom": 0,
         "generated due to waste": 0,
         "generated due to hydrogen": 0,
-        "tax_total": 0
+        "tax_total": 9719
     },
     "grid_flows": {
         "Description": "Total grid flows in kWh/a",
-        "from_el_grid_total": 0,
-        "to_el_grid_total": 74563,
-        "from_gas_grid_total": 0,
-        "to_gas_grid_total": 0,
+        "from_el_grid_total": 59119,
+        "to_el_grid_total": 0,
+        "from_gas_grid_total": 227,
+        "to_gas_grid_total": 227,
         "biom_import_total": 0,
         "waste_import_total": 0,
         "hydrogen_import_total": 0,
-        "max_el_from_grid": 0,
-        "max_gas_from_grid": 0,
-        "max_el_to_grid": 70,
-        "max_gas_to_grid": 0,
+        "max_el_from_grid": 17,
+        "max_gas_from_grid": 3,
+        "max_el_to_grid": 0,
+        "max_gas_to_grid": 3,
         "max_biom": 0,
         "max_waste": 0,
         "max_hydrogen": 0
     },
     "supply_costs": {
         "Description": "Total supply costs in EUR",
-        "supply_costs_el": 0,
+        "supply_costs_el": 1903,
         "cap_costs_el": 0,
-        "total_el_costs": 0,
-        "rev_feed_in_el": 745,
-        "supply_costs_gas": 0,
+        "total_el_costs": 1903,
+        "rev_feed_in_el": 0,
+        "supply_costs_gas": 2,
         "cap_costs_gas": 0,
-        "total_gas_costs": 0,
-        "rev_feed_in_gas": 0,
+        "total_gas_costs": 2,
+        "rev_feed_in_gas": 2,
         "supply_costs_biom": 0,
         "supply_costs_waste": 0,
         "supply_costs_hydrogen": 0
     },
-    "percent_of_renewable_sources": 100.0
+    "percent_of_renewable_sources": 0.0
 }

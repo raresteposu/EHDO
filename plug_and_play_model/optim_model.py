@@ -226,15 +226,16 @@ def run_optim(devs, param, dem, result_dict):
 
     # Set the primary objective to minimize the total annualized costs
     model.setObjective(obj["tac"], gp.GRB.MINIMIZE)
+    model.addConstr(obj["co2"] <= 1e-6)
 
     # If the observation time is less than 16, set a secondary objective to minimize CO2 emissions
     # if param["observation_time"] < 16:
     #     model.setObjectiveN(obj["co2"], index=1, priority=2)
-    # else:
+    # else:f
     #     # Ensure CO2 emissions are below or equal to 0 if observation time is 16 or more
     #     model.addConstr(obj["co2"] <= 1e-6)
 
-    model.addConstr(obj["co2"] <= 1e-6)
+    # model.addConstr(obj["co2"] <= 1e-6)
     # Optimize the model
     model.optimize()
 
@@ -283,6 +284,8 @@ def run_optim(devs, param, dem, result_dict):
             for device in ["PV", "STC"]:            
                 model.addConstr(area[device] >= x[device] * devs[device]["min_area"])
                 model.addConstr(area[device] <= x[device] * devs[device]["max_area"])
+
+            model.addConstr(area["PV"] + area["STC"] <= param["roof_area"])
             
             # Correlation between PV area and peak power; cap["PV"] is only needed for calculating investment costs
             model.addConstr(cap["PV"] == area["PV"] * devs["PV"]["G_stc"] * devs["PV"]["eta"])
@@ -515,19 +518,19 @@ def run_optim(devs, param, dem, result_dict):
         model.addConstr(from_gas_grid_total <= param["supply_limit_gas"])
 
     # Limitation of biomass supply (user input)
-    if param["enable_supply_biomass"] != True:
+    if param["enable_supply_biomass"] == False:
         model.addConstr(biom_import_total == 0)    
     if param["enable_supply_limit_biom"] == True:
         model.addConstr(biom_import_total <= param["supply_limit_biom"])
 
     # Limitation of waste supply (user input)
-    if param["enable_supply_waste"] != True:
+    if param["enable_supply_waste"] == False:
         model.addConstr(waste_import_total == 0)    
     if param["enable_supply_limit_waste"] == True:    
         model.addConstr(waste_import_total <= param["supply_limit_waste"])
 
     # Limitation of hydrogen supply (user input)
-    if param["enable_supply_hydrogen"] != True:
+    if param["enable_supply_hydrogen"] == False:
         model.addConstr(hydrogen_import_total == 0)
     if param["enable_supply_limit_hydrogen"] == True:
         model.addConstr(hydrogen_import_total <= param["supply_limit_hydrogen"])
@@ -551,12 +554,8 @@ def run_optim(devs, param, dem, result_dict):
 
         # Find the closest year to the observation time + 2024
 
-        min_year = min(b_years, key=lambda x:abs(x-(t_clc + 2024)))
-
-        id_min_year = b_years.index(min_year)
-
-        prChange = {"el"   : 1 + (el_prices[id_min_year]/el_prices[0])**1/(min_year-2024),  # Price change factors per year for electricity
-                    "gas"  : 1 + (gas_prices[id_min_year]/gas_prices[0])**1/(min_year-2024),  # Price change factors per year for natural gas
+        prChange = {"el"   : (el_prices[-1]/el_prices[0])**(1/(2040-2024)),  # Price change factors per year for electricity
+                    "gas"  : (gas_prices[-1]/gas_prices[0])**(1/(2040-2024)),  # Price change factors per year for natural gas
                     "infl" : 1.017}  # Price change factors per year for inflation
 
         b = {key: (1 - (prChange[key] / q) ** t_clc) / (q - prChange[key])
@@ -697,10 +696,11 @@ def run_optim(devs, param, dem, result_dict):
 
         print("Optimization: No feasible solution found.")
         try:
-            print("Try to calculate IIS.")
-            model.computeIIS()
-            model.write("model.ilp")
-            print("IIS was calculated and saved as model.ilp")
+            # print("Try to calculate IIS.")
+            # model.computeIIS()
+            # model.write("model.ilp")
+            # print("IIS was calculated and saved as model.ilp")
+            pass
 
         except:
             print("Could not calculate IIS.")
@@ -756,13 +756,13 @@ def run_optim(devs, param, dem, result_dict):
             "onsite": int((from_gas_grid_total.X * param["co2_gas"] + biom_import_total.X * param["co2_biom"] + waste_import_total.X * param["co2_waste"])),
             "credit_feedin": int((to_el_grid_total.X * param["co2_el_feed_in"] + to_gas_grid_total.X * param["co2_gas_feed_in"])),
 
-            "generated due to electrity": int(from_el_grid_total.X * param["co2_el_grid"]),
-            "won due to electricity feed in": int(to_el_grid_total.X * param["co2_el_feed_in"]),
-            "generated due to gas": int(from_gas_grid_total.X * param["co2_gas"]),
-            "won due to gas feed in": int(to_gas_grid_total.X * param["co2_gas_feed_in"]),
-            "generated due to biom": int(biom_import_total.X * param["co2_biom"]),
-            "generated due to waste": int(waste_import_total.X * param["co2_waste"]),
-            "generated due to hydrogen": int(hydrogen_import_total.X * param["co2_hydrogen"])
+            "generated due to el import": int(from_el_grid_total.X * param["co2_el_grid"]),
+            "won due to el export": int(to_el_grid_total.X * param["co2_el_feed_in"]),
+            "generated due to gas import": int(from_gas_grid_total.X * param["co2_gas"]),
+            "won due to gas export": int(to_gas_grid_total.X * param["co2_gas_feed_in"]),
+            "generated due to biom import": int(biom_import_total.X * param["co2_biom"]),
+            "generated due to waste import": int(waste_import_total.X * param["co2_waste"]),
+            "generated due to hydrogen import": int(hydrogen_import_total.X * param["co2_hydrogen"])
         }
 
         result_dict["co2_emissions"]["tax_total"] = int(result_dict["co2_emissions"]["onsite"] * param["co2_tax"] * 1000)  # EUR
@@ -909,7 +909,7 @@ def run_optim(devs, param, dem, result_dict):
                 if k in ["CHP", "BCHP", "WCHP"]:
                     total_generated = result_dict["devices"][k]["generated"]["power"] + result_dict["devices"][k]["generated"]["heat"]
                     result_dict["devices"][k]["full_load_hours"] = int(total_generated / cap[k].X)
-                if k == "HP":
+                elif k == "HP":
                     total_generated = result_dict["devices"][k]["generated"]["heat"] + result_dict["devices"][k]["generated"]["cool"]
                     result_dict["devices"][k]["full_load_hours"] = int(total_generated / cap[k].X)
                 else:

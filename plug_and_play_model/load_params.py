@@ -221,7 +221,6 @@ def load_params(building, size, devices_to_use):
     for d in range(param["n_clusters"]):
         for t in range(24):
             COP[d][t] = eta_carnot * (supply_temp+273.15)/(supply_temp-param["T_air"][d][t])
-            print(COP[d][t])
     
     devs["HP"]["COP"] = COP
         

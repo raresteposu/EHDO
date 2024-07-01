@@ -72,24 +72,6 @@
         }
     },
     "devices": {
-        "PV": {
-            "cap": 102.08,
-            "curtailed": -19,
-            "generated": 96248,
-            "full_load_hours": 942,
-            "area": 567,
-            "cost": 12067,
-            "peak_generation": 85.43
-        },
-        "STC": {
-            "cap": 615.45,
-            "curtailed": 367,
-            "generated": 86074,
-            "full_load_hours": 139,
-            "area": 1367,
-            "cost": 38460,
-            "peak_generation": 120.16
-        },
         "HP": {
             "cap": 9.47,
             "generated": {
@@ -103,43 +85,35 @@
         },
         "EB": {
             "cap": 26.23,
-            "generated": 2828,
-            "full_load_hours": 107,
-            "cost": 446,
-            "peak_generation": 13.03
+            "generated": 63065,
+            "full_load_hours": 2404,
+            "cost": 495,
+            "peak_generation": 21.2
         },
         "TES": {
-            "cap": 1061.73,
+            "cap": 89.38,
             "generated": 0,
             "full_load_hours": 0,
-            "charge_cycles": 53,
-            "volume": 22.9,
-            "cost": 1025,
-            "peak_generation": 0
-        },
-        "BAT": {
-            "cap": 38.61,
-            "generated": 0,
-            "full_load_hours": 0,
-            "charge_cycles": 695,
-            "cost": 3128,
+            "charge_cycles": 27,
+            "volume": 1.9,
+            "cost": 86,
             "peak_generation": 0
         }
     },
     "total_costs": {
         "Description": "Total investment costs in EUR",
-        "total_annualized_costs_objective": 56590,
-        "total_annual_costs": 57336,
-        "total_ann_inv_cost": 56225,
+        "total_annualized_costs_objective": 5523,
+        "total_annual_costs": 2843,
+        "total_ann_inv_cost": 1682,
         "total_om_cost": 1108
     },
     "co2_emissions": {
         "Description": "Total CO2 emissions in kg/a",
         "total_co2_emissions": 0,
         "onsite": 0,
-        "credit_feedin": 0,
-        "generated due to electrity": 0,
-        "won due to electricity feed in": 0,
+        "credit_feedin": 83,
+        "generated due to electrity": 83,
+        "won due to electricity feed in": 83,
         "generated due to gas": 0,
         "won due to gas feed in": 0,
         "generated due to biom": 0,
@@ -149,16 +123,16 @@
     },
     "grid_flows": {
         "Description": "Total grid flows in kWh/a",
-        "from_el_grid_total": 0,
-        "to_el_grid_total": 74599,
+        "from_el_grid_total": 83281,
+        "to_el_grid_total": 166,
         "from_gas_grid_total": 0,
         "to_gas_grid_total": 0,
         "biom_import_total": 0,
         "waste_import_total": 0,
         "hydrogen_import_total": 0,
-        "max_el_from_grid": 0,
+        "max_el_from_grid": 25,
         "max_gas_from_grid": 0,
-        "max_el_to_grid": 71,
+        "max_el_to_grid": 5,
         "max_gas_to_grid": 0,
         "max_biom": 0,
         "max_waste": 0,
@@ -166,10 +140,10 @@
     },
     "supply_costs": {
         "Description": "Total supply costs in EUR",
-        "supply_costs_el": 0,
+        "supply_costs_el": 2681,
         "cap_costs_el": 0,
-        "total_el_costs": 0,
-        "rev_feed_in_el": 745,
+        "total_el_costs": 2681,
+        "rev_feed_in_el": 1,
         "supply_costs_gas": 0,
         "cap_costs_gas": 0,
         "total_gas_costs": 0,
@@ -178,5 +152,5 @@
         "supply_costs_waste": 0,
         "supply_costs_hydrogen": 0
     },
-    "percent_of_renewable_sources": 100.0
+    "percent_of_renewable_sources": 0.0
 }
