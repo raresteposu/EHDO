@@ -13,6 +13,18 @@ INFO:
     - Co2       din param.json vin din THG_emissionsfaktoren, pentru anul 2040
 """
 
+# ----------------------------------------
+
+#TODO: ❗ Ceva nu e bine la calculatul costului. Nu este c_inv * cap, ci e mult mult mai mic.
+    # - Înțelege chestiile ălea de economie, mai ales că trebe să calculezi din nou cu prețurile bune
+
+#TODO: Results.xlsx e corupt, ial de pe git
+
+#TODO: Caută valori pentru co2_feed_in
+    # - Nu ar fii logiv să scaleze cu cât de verde este producția?
+
+# ----------------------------------------
+
 buildings = ["reference",
              "ac_istzustand", 
              "ac_sanierterzustand", 
@@ -21,43 +33,34 @@ buildings = ["reference",
              "hnbk_istzustand",
              "hnbk_sanierterzustand",
              "sk_istzustand",
-             "sk_sanierterzustand"]
+             "sk_sanierterzustand",
+             "quart_istzustand",
+             "quart_sanierterzustand"]
+
 
 size = ["ref", "dez", "zent"]
 
+building = "ac_sanierterzustand" # Choose building
+
+
+# -------------- User input
+
 building = "ac_sanierterzustand" 
-size = "dez" 
-
-
-
-#TODO: ❗ Ceva nu e bine la calulcatul prețurilor. E mult mai mic decât cap * spez_price. Ceva e greșit la ann_factor, și la new_method = False. U
-    # - [ ] Rulează o dată și în EHDO Web și vezi cam ce prețuri ai 
-    # - [ ] Calculează costurile mai exact la Anlagen, luând din Quelle ce preț ar avea la capacitatea de acolo.
-    # - [ ] Ce este total annual costs și ce e total annualized costs?
-        # - Deci care contează dintre ăstea?
-        # - Costurile nu au sens, nici nu se ia taxa de co2 în calcul
-
-#TODO: Vezi technikkatalof Stromdirectheizung și Wärmenetze și haustaation fernwärme
-    # - [ ] Pune după ăstea și în Diagrame
-    # - [ ] Vezi pentru fiecare building dacă are Fernwärme și ce tip de Fernwärme (e verde sau din Kohl)
-
-#TODO: Caută alt interest_rate
-#TODO: Caută valori pentru co2_feed_in
-
-# ---------------------------------------------------------------
-
-
-roof_area = 0
-if building[:2] == "ac": roof_area = 152
-if building[:3] == "pmh": roof_area = 123
-if building[:4] == "hnbk": roof_area = 1600
-if building[:2] == "sk": roof_area = 0
 
 devices_to_use = ["HP", "BOI", "EB", "CHP", "BCHP", "PV", "STC", "BAT", "TES"] # Feasible devices
 
-if building[:2] == "pmh": devices_to_use.remove("BCHP").remove("CHP")
 
-# -------------- First run
+# -------------- Building specific parameters
+
+if building[:2] == "ac": roof_area = 152; size = "dez"
+if building[:3] == "pmh": roof_area = 123; size = "dez"; devices_to_use.remove("BCHP").remove("CHP")
+if building[:4] == "hnbk": roof_area = 1600; size = "dez"
+if building[:2] == "sk": roof_area = 0; size = "dez"
+if building[:4] == "quart": roof_area = 100000; size = "zent"
+
+
+
+# -------------- Load parameters (First run)
 
 param, devs, dem, result_dict = load_params.load_params(building, size, devices_to_use)
 
@@ -66,8 +69,18 @@ param, devs, dem, result_dict = load_params.load_params(building, size, devices_
 param["observation_time"] = 10
 param["roof_area"] = roof_area
 
-param["enable_supply_heat"] = True # AC & PMH = True, HNBK & SK = False
-param["price"]
+if building[:2] == "ac": param["enable_supply_heat"] = True
+if building[:3] == "pmh": param["enable_supply_heat"] = True 
+if building[:4] == "hnbk": param["enable_supply_heat"] = False
+if building[:2] == "sk": param["enable_supply_heat"] = False
+
+if size == "zent":
+    param["price_supply_el"] = 67
+    param["price_supply_gas"] = 15
+    param["enable_supply_heat"] = False
+    param["enable_supply_el"] = False
+    param["enable_supply_gas"] = False
+    param["feed_in_el_limit"] = 1000000000
 
 # -------------- First Results
 
@@ -90,16 +103,16 @@ min_area = {
 min_vol = {
     "TES":5}
 
-devices = list(result_dict["devices"].keys())
+devices = list(result_dict["Devices"].keys())
 for device in devices:
     try:
         if device in ["PV", "STC"]:
-            if result_dict["devices"][device]["area"] < min_area[device]:
+            if result_dict["Devices"][device]["area"] < min_area[device]:
                 devices_to_use.remove(device)
         elif device in ["TES"]:
-            if result_dict["devices"][device]["vol"] < min_vol[device]:
+            if result_dict["Devices"][device]["vol"] < min_vol[device]:
                 devices_to_use.remove(device)
-        elif result_dict["devices"][device]["cap"] < min_cap[device]:
+        elif result_dict["Devices"][device]["cap"] < min_cap[device]:
             devices_to_use.remove(device)
     except:
         pass
@@ -153,22 +166,21 @@ new_specific_prices= { # Source: Technikkatalog 2309
 }
 
 
+for device in result_dict["Devices"]:
+    if device in new_specific_prices[size]: # Dez or Zent
+        cap = result_dict["Devices"][device]["cap"]
+        index_nearest_price = np.abs(np.array(new_specific_prices[size][device]["cap"]) - cap).argmin()
 
-# for device in result_dict["devices"]:
-#     if device in new_specific_prices[size]: # Dez or Zent
-#         cap = result_dict["devices"][device]["cap"]
-#         index_nearest_price = np.abs(np.array(new_specific_prices[size][device]["cap"]) - cap).argmin()
+        index_1 = index_nearest_price - 1 if index_nearest_price > 0 else 0 
+        index_2 = index_nearest_price + 1 if index_nearest_price < len(new_specific_prices[size][device]["cap"]) else len(new_specific_prices[size][device]["cap"])
 
-#         index_1 = index_nearest_price - 1 if index_nearest_price > 0 else 0 
-#         index_2 = index_nearest_price + 1 if index_nearest_price < len(new_specific_prices[size][device]["cap"]) else len(new_specific_prices[size][device]["cap"])
+        price = np.interp(cap, [new_specific_prices[size][device]["cap"][index_1], new_specific_prices[size][device]["cap"][index_2]], [new_specific_prices[size][device]["price"][index_1], new_specific_prices[size][device]["price"][index_2]])
 
-#         price = np.interp(cap, [new_specific_prices[size][device]["cap"][index_1], new_specific_prices[size][device]["cap"][index_2]], [new_specific_prices[size][device]["price"][index_1], new_specific_prices[size][device]["price"][index_2]])
+        cost = round(price * cap,2)
+        result_dict["Devices"][device]["cost"] = cost
 
-#         cost = round(price * cap,2)
-#         result_dict["devices"][device]["cost"] = cost
 
-# 16668
-# 1166
+# -------------- Save results
 
 result_dict_name = "results/" + building +".json"
 with open(result_dict_name, 'w') as json_file:

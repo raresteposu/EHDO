@@ -281,11 +281,11 @@ def calc_monthly_dem(dem_uncl, param_uncl, result_dict):
         year_sum[m] = int(np.sum(dem_uncl[m]))
         for month in range(12):
             monthly_dem[m][month_tuple[month]] = int(sum(dem_uncl[m][t] for t in range(days_sum[month]*24, days_sum[month+1]*24)))
-    result_dict["demands"] = {}
+    result_dict["Demands"] = {}
 
-    result_dict["demands"]["sum"] = year_sum
-    result_dict["demands"]["peak"] = year_peak
-    result_dict["demands"]["monthly"] = monthly_dem
+    result_dict["Demands"]["sum"] = year_sum
+    result_dict["Demands"]["peak"] = year_peak
+    result_dict["Demands"]["monthly"] = monthly_dem
 
     return result_dict
 
