@@ -29,6 +29,7 @@ building = "ac_sanierterzustand"
 size = "dez" 
 
 
+
 #TODO: ❗ Ceva nu e bine la calulcatul prețurilor. E mult mai mic decât cap * spez_price. Ceva e greșit la ann_factor, și la new_method = False. U
     # - [ ] Rulează o dată și în EHDO Web și vezi cam ce prețuri ai 
     # - [ ] Calculează costurile mai exact la Anlagen, luând din Quelle ce preț ar avea la capacitatea de acolo.
@@ -39,15 +40,22 @@ size = "dez"
 #TODO: Vezi technikkatalof Stromdirectheizung și Wärmenetze și haustaation fernwärme
     # - [ ] Pune după ăstea și în Diagrame
     # - [ ] Vezi pentru fiecare building dacă are Fernwärme și ce tip de Fernwärme (e verde sau din Kohl)
-    # - [ ] Trebe să pui după și la calcualte costs un prChange pentru heat
 
 #TODO: Caută alt interest_rate
 #TODO: Caută valori pentru co2_feed_in
 
 # ---------------------------------------------------------------
 
+
+roof_area = 0
+if building[:2] == "ac": roof_area = 152
+if building[:3] == "pmh": roof_area = 123
+if building[:4] == "hnbk": roof_area = 1600
+if building[:2] == "sk": roof_area = 0
+
 devices_to_use = ["HP", "BOI", "EB", "CHP", "BCHP", "PV", "STC", "BAT", "TES"] # Feasible devices
 
+if building[:2] == "pmh": devices_to_use.remove("BCHP").remove("CHP")
 
 # -------------- First run
 
@@ -56,7 +64,10 @@ param, devs, dem, result_dict = load_params.load_params(building, size, devices_
 # -------------- Parameters
 
 param["observation_time"] = 10
-param["roof_area"] = 100
+param["roof_area"] = roof_area
+
+param["enable_supply_heat"] = True # AC & PMH = True, HNBK & SK = False
+param["price"]
 
 # -------------- First Results
 

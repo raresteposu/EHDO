@@ -67,7 +67,7 @@ def run_optim(devs, param, dem, result_dict):
         
     # Gas flow to/from devices
     gas = {}
-    for device in ["CHP", "BOI", "GHP", "SAB", "from_grid", "to_grid"]:
+    for device in ["CHP", "BOI", "GHP", "SAB", "import", "export"]:
         gas[device] = {}
         for d in days:
             gas[device][d] = {}
@@ -76,7 +76,7 @@ def run_optim(devs, param, dem, result_dict):
     
     # Electric power to/from devices
     power = {}
-    for device in ["PV", "WT", "WAT", "HP", "EB", "CC", "CHP", "BCHP", "WCHP", "ELYZ", "FC", "from_grid", "to_grid"]:
+    for device in ["PV", "WT", "WAT", "HP", "EB", "CC", "CHP", "BCHP", "WCHP", "ELYZ", "FC", "import", "export"]:
         power[device] = {}
         for d in days:
             power[device][d] = {}
@@ -85,7 +85,7 @@ def run_optim(devs, param, dem, result_dict):
        
     # Heat to/from devices
     heat = {}
-    for device in ["STC", "HP", "EB", "AC", "CHP", "BOI", "GHP", "BCHP", "BBOI", "WCHP", "WBOI", "FC", "from_grid", "to_grid"]:
+    for device in ["STC", "HP", "EB", "AC", "CHP", "BOI", "GHP", "BCHP", "BBOI", "WCHP", "WBOI", "FC", "import", "export"]:
         heat[device] = {}
         for d in days:
             heat[device][d] = {}
@@ -168,14 +168,14 @@ def run_optim(devs, param, dem, result_dict):
     grid_limit_heat = model.addVar(vtype = "C", name="grid_limit_heat")
     
     # Total energy amounts taken from grid and fed into grid
-    from_el_grid_total = model.addVar(vtype = "C", name="from_el_grid_total")
-    to_el_grid_total   = model.addVar(vtype = "C", name="to_el_grid_total")
+    el_import_total = model.addVar(vtype = "C", name="el_import_total")
+    el_export_total   = model.addVar(vtype = "C", name="el_export_total")
     
-    from_gas_grid_total = model.addVar(vtype = "C", name="from_gas_grid_total")
-    to_gas_grid_total   = model.addVar(vtype = "C", name="to_gas_grid_total")
+    gas_import_total = model.addVar(vtype = "C", name="gas_import_total")
+    gas_export_total   = model.addVar(vtype = "C", name="gas_export_total")
 
-    from_heat_grid_total = model.addVar(vtype = "C", name="from_heat_grid_total")
-    to_heat_grid_total   = model.addVar(vtype = "C", name="to_heat_grid_total")
+    heat_import_total = model.addVar(vtype = "C", name="heat_import_total")
+    heat_export_total   = model.addVar(vtype = "C", name="heat_export_total")
     
     biom_import_total     = model.addVar(vtype = "C", name="biom_import_total")
     waste_import_total    = model.addVar(vtype = "C", name="waste_import_total")
@@ -215,23 +215,23 @@ def run_optim(devs, param, dem, result_dict):
         supply_costs_biom +                      # biomass
         supply_costs_waste +                     # waste
         supply_costs_hydrogen +                  # hydrogen
-        (from_gas_grid_total * param["co2_gas"] +
-         from_el_grid_total * param["co2_el_grid"] +
-         from_heat_grid_total * param["co2_heat"] +
+        (gas_import_total * param["co2_gas"] +
+         el_import_total * param["co2_el"] +
+         heat_import_total * param["co2_heat"] +
         biom_import_total * param["co2_biom"] +
         waste_import_total * param["co2_waste"]) * param["co2_tax"])  # CO2 tax
     )
 
     # Add constraints for total CO2 emissions
     model.addConstr(obj["co2"] == (
-        from_el_grid_total * param["co2_el_grid"] +
-        from_gas_grid_total * param["co2_gas"] +
-        from_heat_grid_total * param["co2_heat"] +
+        el_import_total * param["co2_el"] +
+        gas_import_total * param["co2_gas"] +
+        heat_import_total * param["co2_heat"] +
         biom_import_total * param["co2_biom"] +
         waste_import_total * param["co2_waste"] +
         hydrogen_import_total * param["co2_hydrogen"] -
-        to_el_grid_total * param["co2_el_feed_in"] -
-        to_gas_grid_total * param["co2_gas_feed_in"]
+        el_export_total * param["co2_el_feed_in"] -
+        gas_export_total * param["co2_gas_feed_in"]
     ))
 
     # Set the primary objective to minimize the total annualized costs
@@ -286,7 +286,7 @@ def run_optim(devs, param, dem, result_dict):
                 model.addConstr(gas[device][d][t] <= cap[device])
                 
             # Limitation of power from and to grid   
-            for device in ["from_grid", "to_grid"]:
+            for device in ["import", "export"]:
                 model.addConstr(power[device][d][t] <= grid_limit_el)
                 model.addConstr(gas[device][d][t]   <= grid_limit_gas)   
                 model.addConstr(heat[device][d][t]  <= grid_limit_heat) 
@@ -386,16 +386,16 @@ def run_optim(devs, param, dem, result_dict):
         for t in time_steps:
             
             # Heating balance
-            model.addConstr(heat["STC"][d][t] + heat["HP"][d][t] + heat["EB"][d][t] + heat["CHP"][d][t] + heat["BOI"][d][t] + heat["GHP"][d][t] + heat["BCHP"][d][t] + heat["BBOI"][d][t]+ heat["WCHP"][d][t] + heat["WBOI"][d][t] + heat["FC"][d][t] + heat["from_grid"][d][t] == dem["heat"][d][t] + heat["AC"][d][t] + ch["TES"][d][t])
+            model.addConstr(heat["STC"][d][t] + heat["HP"][d][t] + heat["EB"][d][t] + heat["CHP"][d][t] + heat["BOI"][d][t] + heat["GHP"][d][t] + heat["BCHP"][d][t] + heat["BBOI"][d][t]+ heat["WCHP"][d][t] + heat["WBOI"][d][t] + heat["FC"][d][t] + heat["import"][d][t] == dem["heat"][d][t] + heat["AC"][d][t] + ch["TES"][d][t])
     
             # Electricity balance
-            model.addConstr(power["PV"][d][t] + power["WT"][d][t] + power["WAT"][d][t] + power["CHP"][d][t] + power["BCHP"][d][t] + power["WCHP"][d][t] + power["FC"][d][t] + power["from_grid"][d][t] == dem["power"][d][t] + power["HP"][d][t] + power["EB"][d][t] + power["CC"][d][t] + power["ELYZ"][d][t] + ch["BAT"][d][t] + power["to_grid"][d][t])
+            model.addConstr(power["PV"][d][t] + power["WT"][d][t] + power["WAT"][d][t] + power["CHP"][d][t] + power["BCHP"][d][t] + power["WCHP"][d][t] + power["FC"][d][t] + power["import"][d][t] == dem["power"][d][t] + power["HP"][d][t] + power["EB"][d][t] + power["CC"][d][t] + power["ELYZ"][d][t] + ch["BAT"][d][t] + power["export"][d][t])
     
             # Cooling balance
             model.addConstr(cool["AC"][d][t] + cool["CC"][d][t] + cool["HP"][d][t] == dem["cool"][d][t] + ch["CTES"][d][t])  
             
             # Gas balance
-            model.addConstr(gas["from_grid"][d][t] + gas["SAB"][d][t] == gas["CHP"][d][t] + gas["BOI"][d][t] + gas["GHP"][d][t] + ch["GS"][d][t] + gas["to_grid"][d][t])
+            model.addConstr(gas["import"][d][t] + gas["SAB"][d][t] == gas["CHP"][d][t] + gas["BOI"][d][t] + gas["GHP"][d][t] + ch["GS"][d][t] + gas["export"][d][t])
             
             # Hydrogen balance
             model.addConstr(hydrogen["ELYZ"][d][t] + hydrogen["import"][d][t] == dem["hydrogen"][d][t] + hydrogen["FC"][d][t] + hydrogen["SAB"][d][t] + ch["H2S"][d][t])
@@ -453,16 +453,16 @@ def run_optim(devs, param, dem, result_dict):
 
     ### Total energy import/feed-in ###
     # Total amount of gas taken from and to grid
-    model.addConstr(from_gas_grid_total == sum(sum(gas["from_grid"][d][t] for t in time_steps) * param["day_weights"][d] for d in days))
-    model.addConstr(to_gas_grid_total   == sum(sum(gas["to_grid"][d][t] for t in time_steps) * param["day_weights"][d] for d in days))
+    model.addConstr(gas_import_total == sum(sum(gas["import"][d][t] for t in time_steps) * param["day_weights"][d] for d in days))
+    model.addConstr(gas_export_total   == sum(sum(gas["export"][d][t] for t in time_steps) * param["day_weights"][d] for d in days))
 
     # Total electric energy from and to grid
-    model.addConstr(from_el_grid_total == sum(sum(power["from_grid"][d][t] for t in time_steps) * param["day_weights"][d] for d in days))
-    model.addConstr(to_el_grid_total   == sum(sum(power["to_grid"][d][t] for t in time_steps) * param["day_weights"][d] for d in days))
+    model.addConstr(el_import_total == sum(sum(power["import"][d][t] for t in time_steps) * param["day_weights"][d] for d in days))
+    model.addConstr(el_export_total   == sum(sum(power["export"][d][t] for t in time_steps) * param["day_weights"][d] for d in days))
 
     # Total heat from and grid
 
-    model.addConstr(from_heat_grid_total == sum(sum(heat["from_grid"][d][t] for t in time_steps) * param["day_weights"][d] for d in days))
+    model.addConstr(heat_import_total == sum(sum(heat["import"][d][t] for t in time_steps) * param["day_weights"][d] for d in days))
 
     # Total amount of biomass imported
     model.addConstr(biom_import_total == sum(sum(biom["import"][d][t] for t in time_steps) * param["day_weights"][d] for d in days))
@@ -476,18 +476,18 @@ def run_optim(devs, param, dem, result_dict):
 
     ### Costs ###
     # Costs/revenues for electricity
-    model.addConstr(supply_costs_el  == from_el_grid_total  * param["price_supply_el"])
+    model.addConstr(supply_costs_el  == el_import_total  * param["price_supply_el"])
     model.addConstr(cap_costs_el     == grid_limit_el       * param["price_cap_el"])
-    model.addConstr(rev_feed_in_el   == to_el_grid_total    * param["revenue_feed_in_el"])
+    model.addConstr(rev_feed_in_el   == el_export_total    * param["revenue_feed_in_el"])
     model.addConstr(rev_feed_in_el   <= param["revenue_feed_in_el"] * param["feed_in_el_limit"])
 
     # Costs/revenues for natural gas
-    model.addConstr(supply_costs_gas == from_gas_grid_total * param["price_supply_gas"])
+    model.addConstr(supply_costs_gas == gas_import_total * param["price_supply_gas"])
     model.addConstr(cap_costs_gas    == grid_limit_gas      * param["price_cap_gas"])
-    model.addConstr(rev_feed_in_gas  == to_gas_grid_total   * param["revenue_feed_in_gas"])
+    model.addConstr(rev_feed_in_gas  == gas_export_total   * param["revenue_feed_in_gas"])
 
     # Costs for heat
-    model.addConstr(supply_costs_heat == from_heat_grid_total * param["price_supply_heat"])
+    model.addConstr(supply_costs_heat == heat_import_total * param["price_supply_heat"])
     model.addConstr(cap_costs_heat    == grid_limit_heat      * param["price_cap_heat"])
 
     # Costs for biomass, waste and hydrogen
@@ -500,7 +500,7 @@ def run_optim(devs, param, dem, result_dict):
 
     # Forbid/allow feed-in (user input)
     if param["enable_feed_in_el"] == False:
-        model.addConstr(to_el_grid_total == 0)
+        model.addConstr(el_export_total == 0)
         # Ensure alternative pathways for energy balance
         for d in days:
             for t in time_steps:
@@ -511,38 +511,38 @@ def run_optim(devs, param, dem, result_dict):
                     power["CC"][d][t] + power["ELYZ"][d][t] + ch["BAT"][d][t]
                 )
     if param["enable_feed_in_gas"] == False:
-        model.addConstr(to_gas_grid_total == 0)
+        model.addConstr(gas_export_total == 0)
         # Ensure alternative pathways for gas balance
         for d in days:
             for t in time_steps:
                 model.addConstr(
-                    gas["from_grid"][d][t] + gas["SAB"][d][t] == gas["CHP"][d][t] + 
+                    gas["import"][d][t] + gas["SAB"][d][t] == gas["CHP"][d][t] + 
                     gas["BOI"][d][t] + gas["GHP"][d][t] + ch["GS"][d][t]
                 )
 
     # Limitation of electricity supply (user input)
     if param["enable_supply_el"] == False:
-        model.addConstr(from_el_grid_total == 0)
+        model.addConstr(el_import_total == 0)
     if param["enable_cap_limit_el"] == True:
         model.addConstr(grid_limit_el <= param["cap_limit_el"])
     if param["enable_supply_limit_el"] == True:
-        model.addConstr(from_el_grid_total <= param["supply_limit_el"])
+        model.addConstr(el_import_total <= param["supply_limit_el"])
 
     # Limitation of gas supply (user input)
     if param["enable_supply_gas"] == False:
-        model.addConstr(from_gas_grid_total == 0)
+        model.addConstr(gas_import_total == 0)
     if param["enable_cap_limit_gas"] == True:
         model.addConstr(grid_limit_gas <= param["cap_limit_gas"])
     if param["enable_supply_limit_gas"] == True:
-        model.addConstr(from_gas_grid_total <= param["supply_limit_gas"])
+        model.addConstr(gas_import_total <= param["supply_limit_gas"])
 
     # Limitation of heat supply (user input)
     if param["enable_supply_heat"] == False:
-        model.addConstr(from_heat_grid_total == 0)
+        model.addConstr(heat_import_total == 0)
     if param["enable_cap_limit_heat"] == True:
         model.addConstr(grid_limit_heat <= param["cap_limit_heat"])
     if param["enable_supply_limit_heat"] == True:
-        model.addConstr(from_heat_grid_total <= param["supply_limit_heat"])
+        model.addConstr(heat_import_total <= param["supply_limit_heat"])
 
 
     # Limitation of biomass supply (user input)
@@ -694,7 +694,7 @@ def run_optim(devs, param, dem, result_dict):
 
     # Ensure the negative CO2 emissions from feed-in do not exceed the specified limit
     model.addConstr(
-        (to_el_grid_total * param["co2_el_feed_in"] + to_gas_grid_total * param["co2_gas_feed_in"]) <= co2_feed_in_limit,
+        (el_export_total * param["co2_el_feed_in"] + gas_export_total * param["co2_gas_feed_in"]) <= co2_feed_in_limit,
         "co2_feed_in_limit"
     )
 
@@ -770,7 +770,7 @@ def run_optim(devs, param, dem, result_dict):
 
         }
    
-        co2_emissions = from_el_grid_total.X * param["co2_el_grid"] + from_gas_grid_total.X * param["co2_gas"] + from_heat_grid_total.X * param["co2_heat"] + biom_import_total.X * param["co2_biom"] + waste_import_total.X * param["co2_waste"] + hydrogen_import_total.X * param["co2_hydrogen"] - to_el_grid_total.X * param["co2_el_feed_in"] - to_gas_grid_total.X * param["co2_gas_feed_in"]
+        co2_emissions = el_import_total.X * param["co2_el"] + gas_import_total.X * param["co2_gas"] + heat_import_total.X * param["co2_heat"] + biom_import_total.X * param["co2_biom"] + waste_import_total.X * param["co2_waste"] + hydrogen_import_total.X * param["co2_hydrogen"] - el_export_total.X * param["co2_el_feed_in"] - gas_export_total.X * param["co2_gas_feed_in"]
         # CO2 emissions
         result_dict["co2_emissions"] = {
         
@@ -781,14 +781,14 @@ def run_optim(devs, param, dem, result_dict):
           
                 
 
-            "onsite": int((from_gas_grid_total.X * param["co2_gas"] + biom_import_total.X * param["co2_biom"] + waste_import_total.X * param["co2_waste"])),
-            "credit_feedin": int((to_el_grid_total.X * param["co2_el_feed_in"] + to_gas_grid_total.X * param["co2_gas_feed_in"])),
+            "onsite": int((gas_import_total.X * param["co2_gas"] + biom_import_total.X * param["co2_biom"] + waste_import_total.X * param["co2_waste"])),
+            "credit_feedin": int((el_export_total.X * param["co2_el_feed_in"] + gas_export_total.X * param["co2_gas_feed_in"])),
 
-            "generated due to el import": int(from_el_grid_total.X * param["co2_el_grid"]),
-            "won due to el export": int(to_el_grid_total.X * param["co2_el_feed_in"]),
-            "generated due to gas import": int(from_gas_grid_total.X * param["co2_gas"]),
-            "won due to gas export": int(to_gas_grid_total.X * param["co2_gas_feed_in"]),
-            "generated due to heat import": int(from_heat_grid_total.X * param["co2_heat"]),
+            "generated due to el import": int(el_import_total.X * param["co2_el"]),
+            "won due to el export": int(el_export_total.X * param["co2_el_feed_in"]),
+            "generated due to gas import": int(gas_import_total.X * param["co2_gas"]),
+            "won due to gas export": int(gas_export_total.X * param["co2_gas_feed_in"]),
+            "generated due to heat import": int(heat_import_total.X * param["co2_heat"]),
             "generated due to biom import": int(biom_import_total.X * param["co2_biom"]),
             "generated due to waste import": int(waste_import_total.X * param["co2_waste"]),
             "generated due to hydrogen import": int(hydrogen_import_total.X * param["co2_hydrogen"])
@@ -801,11 +801,11 @@ def run_optim(devs, param, dem, result_dict):
 
             "Description": "Total grid flows in kWh/a",
 
-            "from_el_grid_total"  : int(from_el_grid_total.X)  ,  
-            "to_el_grid_total"    : int(to_el_grid_total.X)  ,    
-            "from_gas_grid_total" : int(from_gas_grid_total.X)  , 
-            "to_gas_grid_total"   : int(to_gas_grid_total.X)  ,
-            "heat_import_total": int(from_heat_grid_total.X) , 
+            "el_import_total"  : int(el_import_total.X)  ,  
+            "el_export_total"    : int(el_export_total.X)  ,    
+            "gas_import_total" : int(gas_import_total.X)  , 
+            "gas_export_total"   : int(gas_export_total.X)  ,
+            "heat_import_total": int(heat_import_total.X) , 
             "biom_import_total"   : int(biom_import_total.X)  ,   
             "waste_import_total"  : int(waste_import_total.X)  ,  
             "hydrogen_import_total": int(hydrogen_import_total.X) 
@@ -817,7 +817,7 @@ def run_optim(devs, param, dem, result_dict):
 
         # Calculate maximum grid flows (electricity, gas and heat)
 
-        for k in ["from_grid", "to_grid"]:
+        for k in ["import", "export"]:
 
             result_dict["grid_flows"]["max_el_" + k] = 0
             result_dict["grid_flows"]["max_gas_" + k] = 0
@@ -982,7 +982,7 @@ def run_optim(devs, param, dem, result_dict):
             if k in used_devices:
                 shared_renew += result_dict["devices"][k]["generated"]
 
-        shared_renew = shared_renew/(shared_renew + from_el_grid_total.X + from_gas_grid_total.X + biom_import_total.X + waste_import_total.X + hydrogen_import_total.X + from_heat_grid_total.X) * 100
+        shared_renew = shared_renew/(shared_renew + el_import_total.X + gas_import_total.X + biom_import_total.X + waste_import_total.X + hydrogen_import_total.X + heat_import_total.X) * 100
 
 
 
@@ -1018,7 +1018,7 @@ def run_optim(devs, param, dem, result_dict):
 
                         "dem_heat", "dem_cool", "dem_power", "dem_hydrogen",
 
-                        "biom_import", "waste_import", "hydrogen_import", "power_to_grid", "power_from_grid", "gas_from_grid", "gas_to_grid", "heat_from_grid"
+                        "biom_import", "waste_import", "hydrogen_import", "power_export", "power_import", "gas_import", "gas_export", "heat_import"
                         ]
 
         soc_list = ["soc_TES", "soc_CTES", "soc_BAT", "soc_GS", "soc_H2S"]
