@@ -39,6 +39,7 @@ size = "dez"
 #TODO: Vezi technikkatalof Stromdirectheizung și Wärmenetze și haustaation fernwärme
     # - [ ] Pune după ăstea și în Diagrame
     # - [ ] Vezi pentru fiecare building dacă are Fernwärme și ce tip de Fernwärme (e verde sau din Kohl)
+    # - [ ] Trebe să pui după și la calcualte costs un prChange pentru heat
 
 #TODO: Caută alt interest_rate
 #TODO: Caută valori pentru co2_feed_in
